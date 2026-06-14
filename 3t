@@ -1,0 +1,45 @@
+import requests
+import json
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+SEPM_IP = "*********"
+USER    = "***********"
+PASS    = "**********"
+TARGET_NAME = "ІМ'Я_КОМП'ЮТЕРА"  # вкажи точне ім'я з попереднього виводу
+
+BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
+
+# Авторизація
+auth_res = requests.post(
+    f"{BASE_URL}/identity/authenticate",
+    json={"username": USER, "password": PASS, "domain": ""},
+    verify=False
+)
+token = auth_res.json()["token"]
+headers = {"Authorization": f"Bearer {token}"}
+
+# Тягнемо і виводимо ВСІ поля першого комп'ютера
+res = requests.get(
+    f"{BASE_URL}/computers",
+    params={"pageSize": 10},
+    headers=headers,
+    verify=False
+)
+
+computers = res.json().get("content", [])
+
+# Шукаємо потрібний
+target = None
+for c in computers:
+    if c.get("computerName") == TARGET_NAME:
+        target = c
+        break
+
+if target:
+    print("Знайдено! Всі поля:")
+    print(json.dumps(target, indent=2))
+else:
+    print("Не знайдено, ось перший комп'ютер зі ВСІМА полями:")
+    print(json.dumps(computers[0], indent=2))

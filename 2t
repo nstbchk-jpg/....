@@ -1,0 +1,38 @@
+import requests
+import json
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+SEPM_IP = "*********"
+USER    = "***********"
+PASS    = "**********"
+
+BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
+
+# Авторизація
+auth_res = requests.post(
+    f"{BASE_URL}/identity/authenticate",
+    json={"username": USER, "password": PASS, "domain": ""},
+    verify=False
+)
+token = auth_res.json()["token"]
+headers = {"Authorization": f"Bearer {token}"}
+
+# Тягнемо перші 10 комп'ютерів і дивимось структуру
+res = requests.get(
+    f"{BASE_URL}/computers",
+    params={"pageSize": 10},
+    headers=headers,
+    verify=False
+)
+
+computers = res.json().get("content", [])
+print(f"Знайдено комп'ютерів: {len(computers)}\n")
+
+for c in computers:
+    print("============================")
+    print(f"computerName : {c.get('computerName')}")
+    print(f"computerId   : {c.get('computerId')}")
+    print(f"ipAddresses  : {c.get('ipAddresses')}")
+    print(f"onlineStatus : {c.get('onlineStatus')}")

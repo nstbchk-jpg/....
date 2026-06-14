@@ -1,166 +1,182 @@
+import requests
+import json
+import time
+from datetime import datetime, timezone
+import urllib3
+
+# Вимикаємо попередження про самопідписаний сертифікат
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# ============================================================
 # 1. Налаштування (ЗАПОВНИ ЦІ ПОЛЯ СВОЇМИ ДАНИМИ)
-[System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
+# ============================================================
+SEPM_IP   = "*********"    # IP сервера SEPM
+USER      = "***********"  # Логін (System Administrator)
+PASS      = "**********"   # Пароль
+TARGET_IP = "************" # IP комп'ютера для сканування
 
-$SEPM_IP = "*********"  # Впиши сюди IP свого сервера SEPM
-$USER    = "***********"         # Твій логін (має бути System Administrator)
-$PASS    = "**********"   # Твій пароль
-$TARGET_IP = "************" # IP комп'ютера, який треба просканувати
+BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
 
-# URL з портом 8446
-$BASE_URL = "https://$($SEPM_IP):8446/sepm/api/v1"
-
-
-# 1 - COMPLETED, 2 - CANCELLED, 3 - REJECTED, 4 - IN_PROGRESS, 5 - INITIAL, 6 - SUSPENDED
-
+# ============================================================
 # 2. Авторизація
-$authBody = @{
-    username = $USER
-    password = $PASS
-    domain   = "" 
-} | ConvertTo-Json
+# ============================================================
+print(f"\033[90m[-] Спроба авторизації на {BASE_URL}...\033[0m")
 
-try {
-    Write-Host "[-] Спроба авторизації на $BASE_URL..." -ForegroundColor Gray
-    $authRes = Invoke-RestMethod -Method Post -Uri "$BASE_URL/identity/authenticate" -Body $authBody -ContentType "application/json"
-    
-    $token = $authRes.token
-    # КРИТИЧНО: Прибираємо Content-Type з глобальних хедерів, щоб не було конфліктів у GET-запитах
-    $headers = @{
-        "Authorization" = "Bearer $token"
-    }
-    Write-Host "[V] Авторизація успішна." -ForegroundColor Green
-} catch {
-    Write-Host "[!] ПОМИЛКА АВТОРИЗАЦІЇ:" -ForegroundColor Red
-    if ($_.Exception.Response) {
-        $statusCode = [int]$_.Exception.Response.StatusCode
-        $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
-        Write-Host "Код статусу: $statusCode" -ForegroundColor Yellow
-        Write-Host "Відповідь сервера: $($reader.ReadToEnd())" -ForegroundColor White
-    } else {
-        Write-Host "Помилка з'єднання: $($_.Exception.Message)" -ForegroundColor Red
-    }
-    exit
+auth_body = {
+    "username": USER,
+    "password": PASS,
+    "domain": ""
 }
 
+try:
+    auth_res = requests.post(
+        f"{BASE_URL}/identity/authenticate",
+        json=auth_body,
+        verify=False
+    )
+    auth_res.raise_for_status()
+    token = auth_res.json()["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    print("\033[32m[V] Авторизація успішна.\033[0m")
+except requests.RequestException as e:
+    print("\033[31m[!] ПОМИЛКА АВТОРИЗАЦІЇ:\033[0m")
+    if e.response is not None:
+        print(f"\033[33mКод статусу: {e.response.status_code}\033[0m")
+        print(f"\033[37mВідповідь сервера: {e.response.text}\033[0m")
+    else:
+        print(f"\033[31mПомилка з'єднання: {e}\033[0m")
+    exit(1)
+
+# ============================================================
 # 3. Пошук комп'ютера
+# ============================================================
+scan_start_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-$scanStartTime = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+print(f"\033[90m[-] Пошук комп'ютера {TARGET_IP}...\033[0m")
 
-try {
-    Write-Host "[-] Пошук комп'ютера $TARGET_IP..." -ForegroundColor Gray
-    # КРИТИЧНО: Параметр фільтрації в SEPM API називається 'computerName', але пошук за точним збігом 
-    # або через силове викачування надійніший. Шукаємо через параметр або фільтруємо масив:
-    $compRes = Invoke-RestMethod -Method Get -Uri "$BASE_URL/computers?computerName=$TARGET_IP" -Headers $headers
-    
-    # SEPM повертає масив об'єктів у полі 'content'
-    $computer = $compRes.content | Select-Object -First 1
-    $compId = $computer.computerId
-} catch {
-    Write-Host "[!] Помилка при пошуку комп'ютера: $_" -ForegroundColor Red
-    exit
-}
+try:
+    comp_res = requests.get(
+        f"{BASE_URL}/computers",
+        params={"computerName": TARGET_IP},
+        headers=headers,
+        verify=False
+    )
+    comp_res.raise_for_status()
+    content = comp_res.json().get("content", [])
+    computer = content[0] if content else None
+    comp_id = computer.get("computerId") if computer else None
+except requests.RequestException as e:
+    print(f"\033[31m[!] Помилка при пошуку комп'ютера: {e}\033[0m")
+    exit(1)
 
-if (-not $compId) { 
-    Write-Host "[?] Комп'ютер $TARGET_IP не знайдено." -ForegroundColor Yellow
-    exit 
-}
-Write-Host "[V] Комп'ютер знайдено. ID: $compId (Статус: $(if($computer.onlineStatus -eq 1){'Online'}else{'Offline'}))" -ForegroundColor Green
+if not comp_id:
+    print(f"\033[33m[?] Комп'ютер {TARGET_IP} не знайдено.\033[0m")
+    exit(1)
 
+status_label = "Online" if computer.get("onlineStatus") == 1 else "Offline"
+print(f"\033[32m[V] Комп'ютер знайдено. ID: {comp_id} (Статус: {status_label})\033[0m")
+
+# ============================================================
 # 4. Запуск сканування через IronCache
-$scanBody = @{
-    command      = "ID_SCAN_NOW"
-    computer_ids = @($compId) # Примусово створюємо JSON масив []
-    data         = @{
-        scan_type = "FULL_SCAN" # Або залиште порожнім @{} якщо потрібен швидкий скан
+# ============================================================
+scan_body = {
+    "command": "ID_SCAN_NOW",
+    "computer_ids": [comp_id],
+    "data": {
+        "scan_type": "FULL_SCAN"
     }
-} | ConvertTo-Json -Depth 5
-
-try {
-    Write-Host "[-] Надсилання команди на сканування..." -ForegroundColor Gray
-    # КРИТИЧНО: Обов'язково вказуємо -ContentType для POST-запиту
-    $scanRes = Invoke-RestMethod -Method Post -Uri "$BASE_URL/command-queue/ironcache" -Headers $headers -Body $scanBody -ContentType "application/json"
-    
-    # Перевірка обох можливих варіантів неймінгу ID команди
-    $cmdId = if ($null -ne $scanRes.commandID) { $scanRes.commandID } else { $scanRes.command_id }
-} catch {
-    Write-Host "[!] Помилка запуску команди." -ForegroundColor Red
-    if ($_.Exception.Response) {
-        $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
-        Write-Host "Деталі помилки: $($reader.ReadToEnd())" -ForegroundColor White
-    }
-    exit
 }
 
-if (-not $cmdId) { 
-    Write-Host "[!] Не отримано ID команди. Сервер повернув: $($scanRes | ConvertTo-Json)" -ForegroundColor Red
-    exit 
-}
-Write-Host "[+] Скан запущено успішно (ID команди: $cmdId). Очікуємо результат..." -ForegroundColor Cyan
+print("\033[90m[-] Надсилання команди на сканування...\033[0m")
 
+try:
+    scan_res = requests.post(
+        f"{BASE_URL}/command-queue/ironcache",
+        json=scan_body,
+        headers=headers,
+        verify=False
+    )
+    scan_res.raise_for_status()
+    scan_json = scan_res.json()
+    cmd_id = scan_json.get("commandID") or scan_json.get("command_id")
+except requests.RequestException as e:
+    print("\033[31m[!] Помилка запуску команди.\033[0m")
+    if e.response is not None:
+        print(f"\033[37mДеталі помилки: {e.response.text}\033[0m")
+    exit(1)
+
+if not cmd_id:
+    print(f"\033[31m[!] Не отримано ID команди. Сервер повернув: {json.dumps(scan_json, indent=2)}\033[0m")
+    exit(1)
+
+print(f"\033[36m[+] Скан запущено успішно (ID команди: {cmd_id}). Очікуємо результат...\033[0m")
+
+# ============================================================
 # 5. Моніторинг статусу
-$isFinished = $false
-while (-not $isFinished) {
-    Write-Host "[-] Очікування 20 секунд перед наступною перевіркою..." -ForegroundColor Gray
-    Start-Sleep -Seconds 20
-    try {
-        $statusRes = Invoke-RestMethod -Method Get -Uri "$BASE_URL/command-queue/$cmdId" -Headers $headers
-        
-        # Перевіряємо статус (state/status)
-        $state = if ($null -ne $statusRes.state) { $statusRes.state } else { $statusRes.status }
-        
-        # Логіка згідно зі специфікацією статусів команд SEPM:
-        switch ($state) {
-            1 { 
-                Write-Host "[V] Скан успішно завершено сервером!" -ForegroundColor Green
-                $isFinished = $true 
-            }
-            2 { 
-                Write-Host "[X] Команду скасування сканування було відхилено або скасовано (Статус 2)." -ForegroundColor Red
-                exit 
-            }
-            3 { 
-                Write-Host "[X] Команду відхилено клієнтом/сервером (Статус 3)." -ForegroundColor Red
-                exit 
-            }
-            4 { 
-                Write-Host "... Сканування виконується на клієнті (Статус 4) ..." -ForegroundColor Gray 
-            }
-            5 { 
-                Write-Host "... Команда створена, очікує на відправку (Статус 5) ..." -ForegroundColor Gray 
-            }
-            default { 
-                Write-Host "... Очікування (Статус $state) ..." -ForegroundColor Gray 
-            }
-        }
-    } catch {
-        Write-Host "[!] Тимчасова помилка запиту статусу (сервер зайнятий). Продовжуємо..." -ForegroundColor Yellow
-    }
-}
+# 1-COMPLETED, 2-CANCELLED, 3-REJECTED, 4-IN_PROGRESS, 5-INITIAL
+# ============================================================
+is_finished = False
 
-# 6. Звіт про віруси
-Write-Host "`n[i] Перевірка знайдених загроз починаючи з: $scanStartTime..." -ForegroundColor Blue
-try {
-    
- 
-    $riskUri = "$BASE_URL/logs/risk?computerId=$compId&startTime=$scanStartTime"
-    $risks = Invoke-RestMethod -Method Get -Uri $riskUri -Headers $headers
-    
-    if ($risks.content -and $risks.content.Count -gt 0) {
-        Write-Host "[!] ВИЯВЛЕНО ЗАГРОЗИ ($($risks.content.Count)):" -ForegroundColor Red
-        $risks.content | ForEach-Object {
-            Write-Host "------------------------------------" -ForegroundColor Yellow
-            Write-Host "Назва вірусу: $($_.virusName)" -ForegroundColor White
-            Write-Host "Шлях/Об'єкт : $($_.source)" -ForegroundColor White
-            Write-Host "Дія системи : $($_.actionTaken)" -ForegroundColor White
-            Write-Host "Час події   : $($_.eventTime)" -ForegroundColor Gray
-        }
-    } else {
-        Write-Host "[+] Загроз не виявлено. Комп'ютер чистий." -ForegroundColor Green
-    }
-} catch {
-    Write-Host "[!] Не вдалося завантажити лог ризиків." -ForegroundColor Yellow
-    if ($_.Exception.Response) {
-        $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
-        Write-Host "Текст помилки логів: $($reader.ReadToEnd())" -ForegroundColor White
-    }
-}
+while not is_finished:
+    print("\033[90m[-] Очікування 20 секунд перед наступною перевіркою...\033[0m")
+    time.sleep(20)
+
+    try:
+        status_res = requests.get(
+            f"{BASE_URL}/command-queue/{cmd_id}",
+            headers=headers,
+            verify=False
+        )
+        status_res.raise_for_status()
+        status_json = status_res.json()
+        state = status_json.get("state") or status_json.get("status")
+
+        if state == 1:
+            print("\033[32m[V] Скан успішно завершено сервером!\033[0m")
+            is_finished = True
+        elif state == 2:
+            print("\033[31m[X] Команду скасовано (Статус 2).\033[0m")
+            exit(1)
+        elif state == 3:
+            print("\033[31m[X] Команду відхилено клієнтом/сервером (Статус 3).\033[0m")
+            exit(1)
+        elif state == 4:
+            print("\033[90m... Сканування виконується на клієнті (Статус 4) ...\033[0m")
+        elif state == 5:
+            print("\033[90m... Команда створена, очікує на відправку (Статус 5) ...\033[0m")
+        else:
+            print(f"\033[90m... Очікування (Статус {state}) ...\033[0m")
+
+    except requests.RequestException:
+        print("\033[33m[!] Тимчасова помилка запиту статусу (сервер зайнятий). Продовжуємо...\033[0m")
+
+# ============================================================
+# 6. Звіт про загрози
+# ============================================================
+print(f"\n\033[34m[i] Перевірка знайдених загроз починаючи з: {scan_start_time}...\033[0m")
+
+try:
+    risks_res = requests.get(
+        f"{BASE_URL}/logs/risk",
+        params={"computerId": comp_id, "startTime": scan_start_time},
+        headers=headers,
+        verify=False
+    )
+    risks_res.raise_for_status()
+    risks = risks_res.json().get("content", [])
+
+    if risks:
+        print(f"\033[31m[!] ВИЯВЛЕНО ЗАГРОЗИ ({len(risks)}):\033[0m")
+        for risk in risks:
+            print("\033[33m------------------------------------\033[0m")
+            print(f"\033[37mНазва вірусу: {risk.get('virusName')}\033[0m")
+            print(f"\033[37mШлях/Об'єкт : {risk.get('source')}\033[0m")
+            print(f"\033[37mДія системи : {risk.get('actionTaken')}\033[0m")
+            print(f"\033[90mЧас події   : {risk.get('eventTime')}\033[0m")
+    else:
+        print("\033[32m[+] Загроз не виявлено. Комп'ютер чистий.\033[0m")
+
+except requests.RequestException as e:
+    print("\033[33m[!] Не вдалося завантажити лог ризиків.\033[0m")
+    if e.response is not None:
+        print(f"\033[37mТекст помилки логів: {e.response.text}\033[0m")

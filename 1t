@@ -1,0 +1,166 @@
+# 1. Налаштування (ЗАПОВНИ ЦІ ПОЛЯ СВОЇМИ ДАНИМИ)
+[System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
+
+$SEPM_IP = "*********"  # Впиши сюди IP свого сервера SEPM
+$USER    = "***********"         # Твій логін (має бути System Administrator)
+$PASS    = "**********"   # Твій пароль
+$TARGET_IP = "************" # IP комп'ютера, який треба просканувати
+
+# URL з портом 8446
+$BASE_URL = "https://$($SEPM_IP):8446/sepm/api/v1"
+
+
+# 1 - COMPLETED, 2 - CANCELLED, 3 - REJECTED, 4 - IN_PROGRESS, 5 - INITIAL, 6 - SUSPENDED
+
+# 2. Авторизація
+$authBody = @{
+    username = $USER
+    password = $PASS
+    domain   = "" 
+} | ConvertTo-Json
+
+try {
+    Write-Host "[-] Спроба авторизації на $BASE_URL..." -ForegroundColor Gray
+    $authRes = Invoke-RestMethod -Method Post -Uri "$BASE_URL/identity/authenticate" -Body $authBody -ContentType "application/json"
+    
+    $token = $authRes.token
+    # КРИТИЧНО: Прибираємо Content-Type з глобальних хедерів, щоб не було конфліктів у GET-запитах
+    $headers = @{
+        "Authorization" = "Bearer $token"
+    }
+    Write-Host "[V] Авторизація успішна." -ForegroundColor Green
+} catch {
+    Write-Host "[!] ПОМИЛКА АВТОРИЗАЦІЇ:" -ForegroundColor Red
+    if ($_.Exception.Response) {
+        $statusCode = [int]$_.Exception.Response.StatusCode
+        $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+        Write-Host "Код статусу: $statusCode" -ForegroundColor Yellow
+        Write-Host "Відповідь сервера: $($reader.ReadToEnd())" -ForegroundColor White
+    } else {
+        Write-Host "Помилка з'єднання: $($_.Exception.Message)" -ForegroundColor Red
+    }
+    exit
+}
+
+# 3. Пошук комп'ютера
+
+$scanStartTime = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+
+try {
+    Write-Host "[-] Пошук комп'ютера $TARGET_IP..." -ForegroundColor Gray
+    # КРИТИЧНО: Параметр фільтрації в SEPM API називається 'computerName', але пошук за точним збігом 
+    # або через силове викачування надійніший. Шукаємо через параметр або фільтруємо масив:
+    $compRes = Invoke-RestMethod -Method Get -Uri "$BASE_URL/computers?computerName=$TARGET_IP" -Headers $headers
+    
+    # SEPM повертає масив об'єктів у полі 'content'
+    $computer = $compRes.content | Select-Object -First 1
+    $compId = $computer.computerId
+} catch {
+    Write-Host "[!] Помилка при пошуку комп'ютера: $_" -ForegroundColor Red
+    exit
+}
+
+if (-not $compId) { 
+    Write-Host "[?] Комп'ютер $TARGET_IP не знайдено." -ForegroundColor Yellow
+    exit 
+}
+Write-Host "[V] Комп'ютер знайдено. ID: $compId (Статус: $(if($computer.onlineStatus -eq 1){'Online'}else{'Offline'}))" -ForegroundColor Green
+
+# 4. Запуск сканування через IronCache
+$scanBody = @{
+    command      = "ID_SCAN_NOW"
+    computer_ids = @($compId) # Примусово створюємо JSON масив []
+    data         = @{
+        scan_type = "FULL_SCAN" # Або залиште порожнім @{} якщо потрібен швидкий скан
+    }
+} | ConvertTo-Json -Depth 5
+
+try {
+    Write-Host "[-] Надсилання команди на сканування..." -ForegroundColor Gray
+    # КРИТИЧНО: Обов'язково вказуємо -ContentType для POST-запиту
+    $scanRes = Invoke-RestMethod -Method Post -Uri "$BASE_URL/command-queue/ironcache" -Headers $headers -Body $scanBody -ContentType "application/json"
+    
+    # Перевірка обох можливих варіантів неймінгу ID команди
+    $cmdId = if ($null -ne $scanRes.commandID) { $scanRes.commandID } else { $scanRes.command_id }
+} catch {
+    Write-Host "[!] Помилка запуску команди." -ForegroundColor Red
+    if ($_.Exception.Response) {
+        $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+        Write-Host "Деталі помилки: $($reader.ReadToEnd())" -ForegroundColor White
+    }
+    exit
+}
+
+if (-not $cmdId) { 
+    Write-Host "[!] Не отримано ID команди. Сервер повернув: $($scanRes | ConvertTo-Json)" -ForegroundColor Red
+    exit 
+}
+Write-Host "[+] Скан запущено успішно (ID команди: $cmdId). Очікуємо результат..." -ForegroundColor Cyan
+
+# 5. Моніторинг статусу
+$isFinished = $false
+while (-not $isFinished) {
+    Write-Host "[-] Очікування 20 секунд перед наступною перевіркою..." -ForegroundColor Gray
+    Start-Sleep -Seconds 20
+    try {
+        $statusRes = Invoke-RestMethod -Method Get -Uri "$BASE_URL/command-queue/$cmdId" -Headers $headers
+        
+        # Перевіряємо статус (state/status)
+        $state = if ($null -ne $statusRes.state) { $statusRes.state } else { $statusRes.status }
+        
+        # Логіка згідно зі специфікацією статусів команд SEPM:
+        switch ($state) {
+            1 { 
+                Write-Host "[V] Скан успішно завершено сервером!" -ForegroundColor Green
+                $isFinished = $true 
+            }
+            2 { 
+                Write-Host "[X] Команду скасування сканування було відхилено або скасовано (Статус 2)." -ForegroundColor Red
+                exit 
+            }
+            3 { 
+                Write-Host "[X] Команду відхилено клієнтом/сервером (Статус 3)." -ForegroundColor Red
+                exit 
+            }
+            4 { 
+                Write-Host "... Сканування виконується на клієнті (Статус 4) ..." -ForegroundColor Gray 
+            }
+            5 { 
+                Write-Host "... Команда створена, очікує на відправку (Статус 5) ..." -ForegroundColor Gray 
+            }
+            default { 
+                Write-Host "... Очікування (Статус $state) ..." -ForegroundColor Gray 
+            }
+        }
+    } catch {
+        Write-Host "[!] Тимчасова помилка запиту статусу (сервер зайнятий). Продовжуємо..." -ForegroundColor Yellow
+    }
+}
+
+# 6. Звіт про віруси
+Write-Host "`n[i] Перевірка знайдених загроз починаючи з: $scanStartTime..." -ForegroundColor Blue
+try {
+    
+ 
+    $riskUri = "$BASE_URL/logs/risk?computerId=$compId&startTime=$scanStartTime"
+    $risks = Invoke-RestMethod -Method Get -Uri $riskUri -Headers $headers
+    
+    if ($risks.content -and $risks.content.Count -gt 0) {
+        Write-Host "[!] ВИЯВЛЕНО ЗАГРОЗИ ($($risks.content.Count)):" -ForegroundColor Red
+        $risks.content | ForEach-Object {
+            Write-Host "------------------------------------" -ForegroundColor Yellow
+            Write-Host "Назва вірусу: $($_.virusName)" -ForegroundColor White
+            Write-Host "Шлях/Об'єкт : $($_.source)" -ForegroundColor White
+            Write-Host "Дія системи : $($_.actionTaken)" -ForegroundColor White
+            Write-Host "Час події   : $($_.eventTime)" -ForegroundColor Gray
+        }
+    } else {
+        Write-Host "[+] Загроз не виявлено. Комп'ютер чистий." -ForegroundColor Green
+    }
+} catch {
+    Write-Host "[!] Не вдалося завантажити лог ризиків." -ForegroundColor Yellow
+    if ($_.Exception.Response) {
+        $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+        Write-Host "Текст помилки логів: $($reader.ReadToEnd())" -ForegroundColor White
+    }
+}

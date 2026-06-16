@@ -1,0 +1,8 @@
+OneDrive – якщо це зовнішній ресурс, то чи можна зберігати на ньому БТ та Інші документи користувачам,
+
+Якщо внутрішній, то чому трафік ходить на нього через проксі сервер.
+Ну на КФ так (проксед) , но войти не получается
+И я не вижу, что через прокси
+Вот я зашел – там только хром в гугл сливает
+
+<159>Jun 09 14:27:27 =****** LEEF:1.0|Forcepoint|Security|8.5.7|transaction:permitted|sev=1       cat=76                usrName=LDAP://**** OU\=CA_Q0,   loginID=******                src==******          srcPort=56854  srcBytes=2631  dstBytes=2000  dst=142.251.157.119     dstPort=443                proxyStatus-code=200  serverStatus-code=200 duration=6          method=GET      disposition=1030                contentType=text/javascript; charset\=UTF-8      reason=-              policy=Super Administrator**PermitALL,Super Administrator**WIFI_Guest     role=8   userAgent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36                url=https://www.google.com/complete/search?client\=chrome-omni&gs_ri\=chrome-ext-ansg&xssi\=t&q\=https%3A%2F%2Fmysites.bank.gov.ua&oit\=3&cp\=27&url\=https%3A%2F%2Fmysites.bank.gov.ua%2Fmy%2F000153%2F_layouts%2F15%2Fonedrive.aspx&pgcl\=4&gs_rn\=42&psi\=hO4gOdX7DfaFwX6G&sugkey\=AIzaSyA2KlwBX3mkFo30om9LUFYQhpqLoa_BNhE logRecordSource=OnPrem

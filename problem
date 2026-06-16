@@ -1,3 +1,10 @@
+comp_id = '*************'
+scan_body = {
+  "command": "ID_SCAN_NOW",
+  "computer_ids": [
+    "*************"
+  ]
+}
 ←[90m[-] Надсилання команди на сканування...←[0m
 ←[31m[!] Помилка запуску команди.←[0m
-←[37mДеталі помилки: {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}←[0m
+←[37mДеталі помилки: {"errorCode":"400","appErrorCode":"","errorMessage":"'data' Unable to process a empty hash data."}←[0m

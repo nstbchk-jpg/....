@@ -1,0 +1,24 @@
+import requests
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+SEPM_IP = "*********"
+USER    = "***********"
+PASS    = "**********"
+
+BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
+
+# Авторизація
+auth_res = requests.post(
+    f"{BASE_URL}/identity/authenticate",
+    json={"username": USER, "password": PASS, "domain": ""},
+    verify=False
+)
+token = auth_res.json()["token"]
+headers = {"Authorization": f"Bearer {token}"}
+print("Авторизація успішна")
+
+# Версія
+ver_res = requests.get(f"{BASE_URL}/version", headers=headers, verify=False)
+print(ver_res.json())

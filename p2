@@ -1,5 +1,3 @@
-←[90m[-] Пошук комп'ютера *************...←[0m
-←[32m[V] Знайдено: ************* | ID: ************* | Статус: Online←[0m
 comp_id  = '*************'
 group_id = '*************'
 Тест 1: 400 | {"errorCode":"400","appErrorCode":"","errorMessage":"No matching records found for input argument computer_ids or hardware_ids. "}
@@ -7,3 +5,6 @@ group_id = '*************'
 Тест 3: 400 | {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}
 Тест 4: 400 | {"errorCode":"400","appErrorCode":"","errorMessage":"No matching records found for input argument computer_ids or hardware_ids. "}
 Тест 5: 200 | {"commandID_group":"*************","commandID_computer":""}
+Тест 6: 400 | {"errorCode":"400","appErrorCode":"","errorMessage":"No matching records found for input argument computer_ids or hardware_ids. "}
+Тест 7: 400 | {"errorCode":"400","appErrorCode":"","errorMessage":"No matching records found for input argument computer_ids or hardware_ids. "}
+Тест 8: 400 | {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}

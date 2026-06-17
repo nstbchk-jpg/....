@@ -1,15 +1,46 @@
-comp_id = '*******************'
-←[90m[-] Надсилання команди на сканування...←[0m
-←[90m[-] Пробуємо: scancomputer з тілом: {"computer_ids": ["44BBBC146F3218925BA6231688F8B793"], "scan_type": "FULL_SCAN"}←[0m
-    Статус: 500 | Відповідь: {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}
-←[90m[-] Пробуємо: scancomputer з тілом: {"hardwareKey": "44BBBC146F3218925BA6231688F8B793"}←[0m
-    Статус: 500 | Відповідь: {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}
-←[90m[-] Пробуємо: scancomputer з тілом: {"computerName": "CB0-005354"}←[0m
-    Статус: 500 | Відповідь: {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}
-←[90m[-] Пробуємо: activescan з тілом: {"computerIds": ["44BBBC146F3218925BA6231688F8B793"]}←[0m
-    Статус: 400 | Відповідь: {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}
-←[90m[-] Пробуємо: fullscan з тілом: {"computerIds": ["44BBBC146F3218925BA6231688F8B793"]}←[0m
-    Статус: 400 | Відповідь: {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}
-←[90m[-] Пробуємо: fullscan з тілом: {"hardware_ids": ["44BBBC146F3218925BA6231688F8B793"]}←[0m
-    Статус: 400 | Відповідь: {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}
-←[31m[!] Жоден варіант не спрацював. Перевір вивід вище.←[0m
+# ============================================================
+# 4. Запуск сканування — перебираємо варіанти
+# ============================================================
+
+group_id = computer.get("group", {}).get("id")
+print(f"comp_id  = '{comp_id}'")
+print(f"group_id = '{group_id}'")
+print("\033[90m[-] Надсилання команди на сканування...\033[0m")
+
+endpoints_to_try = [
+    ("scancomputer", {}),
+    ("scancomputer", {"computer_ids": [comp_id]}),
+    ("scancomputer", {"computer_ids": [comp_id], "scan_type": "FULL_SCAN"}),
+    ("scancomputer", {"hardware_ids": [comp_id]}),
+    ("activescan",   {"computer_ids": [comp_id]}),
+    ("activescan",   {"hardware_ids": [comp_id]}),
+    ("activescan",   {"group_ids": [group_id]}),
+    ("fullscan",     {"computer_ids": [comp_id]}),
+    ("fullscan",     {"hardware_ids": [comp_id]}),
+    ("fullscan",     {"group_ids": [group_id]}),
+]
+
+cmd_id = None
+for endpoint, body in endpoints_to_try:
+    print(f"\033[90m[-] Пробуємо: {endpoint} | тіло: {json.dumps(body)}\033[0m")
+    try:
+        res = requests.post(
+            f"{BASE_URL}/command-queue/{endpoint}",
+            json=body,
+            headers=headers,
+            verify=False
+        )
+        print(f"    Статус: {res.status_code} | Відповідь: {res.text[:300]}")
+        if res.status_code in (200, 201):
+            scan_json = res.json()
+            cmd_id = scan_json.get("commandID") or scan_json.get("command_id")
+            print(f"\033[32m[V] Успіх! endpoint={endpoint}, cmd_id={cmd_id}\033[0m")
+            break
+    except Exception as e:
+        print(f"    Помилка з'єднання: {e}")
+
+if not cmd_id:
+    print("\033[31m[!] Жоден варіант не спрацював. Перевір вивід вище.\033[0m")
+    exit(1)
+
+print(f"\033[36m[+] Скан запущено (ID команди: {cmd_id}). Очікуємо результат...\033[0m")

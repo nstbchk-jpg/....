@@ -1,1 +1,22 @@
-←[37mДеталі помилки: {"errorCode":"400","appErrorCode":"","errorMessage":"Unable to process the request - Evidence of Compromise file validation failed."}←[0m
+1.  "scan_type": "FULL_SCAN"
+}
+←[90m[-] Надсилання команди на сканування...←[0m
+500 {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}
+←[31m[!] Помилка запуску команди.←[0m
+←[37mДеталі помилки: {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}←[0m
+
+
+
+2.  "scan_type": "FULL_SCAN"
+}
+←[90m[-] Надсилання команди на сканування...←[0m
+400 {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}
+←[31m[!] Помилка запуску команди.←[0m
+←[37mДеталі помилки: {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}←[0m
+
+
+
+3.←[90m[-] Надсилання команди на сканування...←[0m
+400 {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}
+←[31m[!] Помилка запуску команди.←[0m
+←[37mДеталі помилки: {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}←[0m

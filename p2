@@ -1,22 +1,33 @@
-1.  "scan_type": "FULL_SCAN"
+# ============================================================
+# 4. Запуск сканування
+# ============================================================
+scan_body = {
+    "computer_ids": [comp_id],
+    "scan_type": "FULL_SCAN"
 }
-←[90m[-] Надсилання команди на сканування...←[0m
-500 {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}
-←[31m[!] Помилка запуску команди.←[0m
-←[37mДеталі помилки: {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}←[0m
 
+print(f"comp_id = '{comp_id}'")
+print(f"scan_body = {json.dumps(scan_body, indent=2)}")
+print("\033[90m[-] Надсилання команди на сканування...\033[0m")
 
+try:
+    scan_res = requests.post(
+        f"{BASE_URL}/command-queue/fullscan",
+        json={"computer_ids": [comp_id]},
+        headers=headers,
+        verify=False
+    )
+    print(scan_res.status_code, scan_res.text)
+    
+    scan_res.raise_for_status()
+    scan_json = scan_res.json()
+    cmd_id = scan_json.get("commandID") or scan_json.get("command_id")
+except requests.RequestException as e:
+    print("\033[31m[!] Помилка запуску команди.\033[0m")
+    if e.response is not None:
+        print(f"\033[37mДеталі помилки: {e.response.text}\033[0m")
+    exit(1)
 
-2.  "scan_type": "FULL_SCAN"
-}
-←[90m[-] Надсилання команди на сканування...←[0m
-400 {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}
-←[31m[!] Помилка запуску команди.←[0m
-←[37mДеталі помилки: {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}←[0m
-
-
-
-3.←[90m[-] Надсилання команди на сканування...←[0m
-400 {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}
-←[31m[!] Помилка запуску команди.←[0m
-←[37mДеталі помилки: {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}←[0m
+if not cmd_id:
+    print(f"\033[31m[!] Не отримано ID команди. Сервер повернув: {json.dumps(scan_json, indent=2)}\033[0m")
+    exit(1)

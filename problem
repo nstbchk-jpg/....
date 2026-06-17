@@ -1,1 +1,1 @@
-←[37mДеталі помилки: {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}←[0m
+{'API_SEQUENCE': '250319020', 'API_VERSION': '14.3.10000', 'version': '14.3.27665.10000'}

@@ -1,0 +1,129 @@
+import requests
+import json
+import time
+from datetime import datetime, timezone
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# ============================================================
+# 1. Налаштування
+# ============================================================
+SEPM_IP     = "*********"
+USER        = "***********"
+PASS        = "**********"
+TARGET_NAME = "CB0-005354"
+
+BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
+
+# ============================================================
+# 2. Авторизація
+# ============================================================
+print(f"\033[90m[-] Спроба авторизації на {BASE_URL}...\033[0m")
+
+try:
+    auth_res = requests.post(
+        f"{BASE_URL}/identity/authenticate",
+        json={"username": USER, "password": PASS, "domain": ""},
+        verify=False
+    )
+    auth_res.raise_for_status()
+    token = auth_res.json()["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    print("\033[32m[V] Авторизація успішна.\033[0m")
+except requests.RequestException as e:
+    print("\033[31m[!] ПОМИЛКА АВТОРИЗАЦІЇ:\033[0m")
+    if e.response is not None:
+        print(f"\033[33mКод статусу: {e.response.status_code}\033[0m")
+        print(f"\033[37mВідповідь сервера: {e.response.text}\033[0m")
+    else:
+        print(f"\033[31mПомилка з'єднання: {e}\033[0m")
+    exit(1)
+
+# ============================================================
+# 3. Пошук комп'ютера по імені
+# ============================================================
+scan_start_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+print(f"\033[90m[-] Пошук комп'ютера {TARGET_NAME}...\033[0m")
+
+try:
+    all_res = requests.get(
+        f"{BASE_URL}/computers",
+        params={"pageSize": 1000},
+        headers=headers,
+        verify=False
+    )
+    all_res.raise_for_status()
+    all_computers = all_res.json().get("content", [])
+
+    computer = None
+    for c in all_computers:
+        if c.get("computerName", "").upper() == TARGET_NAME.upper():
+            computer = c
+            break
+
+except requests.RequestException as e:
+    print(f"\033[31m[!] Помилка при пошуку комп'ютера: {e}\033[0m")
+    exit(1)
+
+if not computer:
+    print(f"\033[33m[?] Комп'ютер '{TARGET_NAME}' не знайдено.\033[0m")
+    for c in all_computers:
+        print(f"    {c.get('computerName')} — {c.get('ipAddresses')}")
+    exit(1)
+
+comp_id  = computer.get("hardwareKey")
+group_id = computer.get("group", {}).get("id")
+
+status_label = "Online" if computer.get("onlineStatus") == 1 else "Offline"
+print(f"\033[32m[V] Знайдено: {computer.get('computerName')} | ID: {comp_id} | Статус: {status_label}\033[0m")
+
+# ============================================================
+# 4. Діагностика запуску сканування
+# ============================================================
+print(f"comp_id  = '{comp_id}'")
+print(f"group_id = '{group_id}'")
+
+# Тест 1 — параметри в URL
+res = requests.post(
+    f"{BASE_URL}/command-queue/activescan",
+    params={"computer_ids": comp_id},
+    headers=headers,
+    verify=False
+)
+print(f"Тест 1: {res.status_code} | {res.text[:200]}")
+
+# Тест 2 — form data
+res = requests.post(
+    f"{BASE_URL}/command-queue/activescan",
+    data={"computer_ids": comp_id},
+    headers=headers,
+    verify=False
+)
+print(f"Тест 2: {res.status_code} | {res.text[:200]}")
+
+# Тест 3 — вручну серіалізований JSON
+res = requests.post(
+    f"{BASE_URL}/command-queue/activescan",
+    data=json.dumps({"computer_ids": [comp_id]}),
+    headers={**headers, "Content-Type": "application/json"},
+    verify=False
+)
+print(f"Тест 3: {res.status_code} | {res.text[:200]}")
+
+# Тест 4 — computer_ids в URL
+res = requests.post(
+    f"{BASE_URL}/command-queue/activescan?computer_ids={comp_id}",
+    headers=headers,
+    verify=False
+)
+print(f"Тест 4: {res.status_code} | {res.text[:200]}")
+
+# Тест 5 — fullscan з group_ids в URL
+res = requests.post(
+    f"{BASE_URL}/command-queue/fullscan?group_ids={group_id}",
+    headers=headers,
+    verify=False
+)
+print(f"Тест 5: {res.status_code} | {res.text[:200]}")

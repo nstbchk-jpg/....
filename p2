@@ -1,25 +1,44 @@
-←[32m[V] Знайдено: ******* | ID: ************ | Статус: Online←[0m
-comp_id  = '************'
-group_id = '************'
-←[90m[-] Надсилання команди на сканування...←[0m
-←[90m[-] Пробуємо: scancomputer | тіло: {}←[0m
-    Статус: 500 | Відповідь: {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}
-←[90m[-] Пробуємо: scancomputer | тіло: {"computer_ids": ["************"]}←[0m
-    Статус: 500 | Відповідь: {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}
-←[90m[-] Пробуємо: scancomputer | тіло: {"computer_ids": ["************"], "scan_type": "FULL_SCAN"}←[0m
-    Статус: 500 | Відповідь: {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}
-←[90m[-] Пробуємо: scancomputer | тіло: {"hardware_ids": ["************"]}←[0m
-    Статус: 500 | Відповідь: {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}
-←[90m[-] Пробуємо: activescan | тіло: {"computer_ids": ["************"]}←[0m
-    Статус: 400 | Відповідь: {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}
-←[90m[-] Пробуємо: activescan | тіло: {"hardware_ids": ["************"]}←[0m
-    Статус: 400 | Відповідь: {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}
-←[90m[-] Пробуємо: activescan | тіло: {"group_ids": ["************"]}←[0m
-    Статус: 400 | Відповідь: {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}
-←[90m[-] Пробуємо: fullscan | тіло: {"computer_ids": ["************"]}←[0m
-    Статус: 400 | Відповідь: {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}
-←[90m[-] Пробуємо: fullscan | тіло: {"hardware_ids": ["************"]}←[0m
-    Статус: 400 | Відповідь: {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}
-←[90m[-] Пробуємо: fullscan | тіло: {"group_ids": ["************"]}←[0m
-    Статус: 400 | Відповідь: {"errorCode":"400","appErrorCode":"","errorMessage":"group_ids and or computer_ids or hardware_ids argument must not be empty."}
-←[31m[!] Жоден варіант не спрацював. Перевір вивід вище.←[0m
+import urllib.parse
+
+# Тест 1 — параметри в URL а не в body
+res = requests.post(
+    f"{BASE_URL}/command-queue/activescan",
+    params={"computer_ids": comp_id},
+    headers=headers,
+    verify=False
+)
+print(f"Тест 1: {res.status_code} | {res.text[:200]}")
+
+# Тест 2 — form data замість json
+res = requests.post(
+    f"{BASE_URL}/command-queue/activescan",
+    data={"computer_ids": comp_id},
+    headers=headers,
+    verify=False
+)
+print(f"Тест 2: {res.status_code} | {res.text[:200]}")
+
+# Тест 3 — вручну серіалізований JSON рядок
+res = requests.post(
+    f"{BASE_URL}/command-queue/activescan",
+    data=json.dumps({"computer_ids": [comp_id]}),
+    headers={**headers, "Content-Type": "application/json"},
+    verify=False
+)
+print(f"Тест 3: {res.status_code} | {res.text[:200]}")
+
+# Тест 4 — activescan з computer_ids в URL
+res = requests.post(
+    f"{BASE_URL}/command-queue/activescan?computer_ids={comp_id}",
+    headers=headers,
+    verify=False
+)
+print(f"Тест 4: {res.status_code} | {res.text[:200]}")
+
+# Тест 5 — fullscan з group_ids в URL
+res = requests.post(
+    f"{BASE_URL}/command-queue/fullscan?group_ids={group_id}",
+    headers=headers,
+    verify=False
+)
+print(f"Тест 5: {res.status_code} | {res.text[:200]}")

@@ -1,1 +1,27 @@
-{'API_SEQUENCE': '250319020', 'API_VERSION': '14.3.10000', 'version': '14.3.27665.10000'}
+scan_body = {
+    "computer_ids": [comp_id],
+    "scan_type": "FULL_SCAN"  # або "QUICK_SCAN"
+}
+
+scan_res = requests.post(
+    f"{BASE_URL}/command-queue/eoc?computer_ids={comp_id}",
+    json=scan_body,
+    headers=headers,
+    verify=False
+)
+
+
+
+
+
+scan_body = {
+    "computer_ids": [comp_id],
+    "scan_type": "FULL_SCAN"
+}
+
+scan_res = requests.post(
+    f"{BASE_URL}/command-queue/eoc",
+    json=scan_body,
+    headers=headers,
+    verify=False
+)

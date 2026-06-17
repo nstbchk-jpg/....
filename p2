@@ -1,33 +1,40 @@
 # ============================================================
-# 4. Запуск сканування
+# 4. Запуск сканування — перебираємо варіанти
 # ============================================================
-scan_body = {
-    "computer_ids": [comp_id],
-    "scan_type": "FULL_SCAN"
-}
 
 print(f"comp_id = '{comp_id}'")
-print(f"scan_body = {json.dumps(scan_body, indent=2)}")
 print("\033[90m[-] Надсилання команди на сканування...\033[0m")
 
-try:
-    scan_res = requests.post(
-        f"{BASE_URL}/command-queue/fullscan",
-        json={"computer_ids": [comp_id]},
-        headers=headers,
-        verify=False
-    )
-    print(scan_res.status_code, scan_res.text)
-    
-    scan_res.raise_for_status()
-    scan_json = scan_res.json()
-    cmd_id = scan_json.get("commandID") or scan_json.get("command_id")
-except requests.RequestException as e:
-    print("\033[31m[!] Помилка запуску команди.\033[0m")
-    if e.response is not None:
-        print(f"\033[37mДеталі помилки: {e.response.text}\033[0m")
-    exit(1)
+endpoints_to_try = [
+    ("scancomputer", {"computer_ids": [comp_id], "scan_type": "FULL_SCAN"}),
+    ("scancomputer", {"hardwareKey": comp_id}),
+    ("scancomputer", {"computerName": TARGET_NAME}),
+    ("activescan",   {"computerIds": [comp_id]}),
+    ("fullscan",     {"computerIds": [comp_id]}),
+    ("fullscan",     {"hardware_ids": [comp_id]}),
+]
+
+cmd_id = None
+for endpoint, body in endpoints_to_try:
+    print(f"\033[90m[-] Пробуємо: {endpoint} з тілом: {json.dumps(body)}\033[0m")
+    try:
+        res = requests.post(
+            f"{BASE_URL}/command-queue/{endpoint}",
+            json=body,
+            headers=headers,
+            verify=False
+        )
+        print(f"    Статус: {res.status_code} | Відповідь: {res.text[:200]}")
+        if res.status_code in (200, 201):
+            scan_json = res.json()
+            cmd_id = scan_json.get("commandID") or scan_json.get("command_id")
+            print(f"\033[32m[V] Успіх! endpoint={endpoint}, cmd_id={cmd_id}\033[0m")
+            break
+    except Exception as e:
+        print(f"    Помилка: {e}")
 
 if not cmd_id:
-    print(f"\033[31m[!] Не отримано ID команди. Сервер повернув: {json.dumps(scan_json, indent=2)}\033[0m")
+    print("\033[31m[!] Жоден варіант не спрацював. Перевір вивід вище.\033[0m")
     exit(1)
+
+print(f"\033[36m[+] Скан запущено (ID команди: {cmd_id}). Очікуємо результат...\033[0m")

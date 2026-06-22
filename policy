@@ -7,7 +7,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 SEPM_IP = "*********"
 USER    = "***********"
 PASS    = "**********"
-CHECK_HASH = "d41d8cd98f00b204e9800998ecf8427e"  # хеш який перевіряємо
+CHECK_HASH = "сюди_встав_хеш"
 
 BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
 
@@ -20,7 +20,6 @@ token = auth_res.json()["token"]
 headers = {"Authorization": f"Bearer {token}"}
 print("Авторизація успішна\n")
 
-# Отримуємо всі політики
 res = requests.get(
     f"{BASE_URL}/policies/summary",
     params={"pageSize": 100},
@@ -29,32 +28,25 @@ res = requests.get(
 )
 
 policies = res.json().get("content", [])
-exception_policies = [p for p in policies if p.get("policyType") == "exceptions"]
-print(f"Знайдено exceptions політик: {len(exception_policies)}\n")
+print(f"Всього політик: {len(policies)}\n")
 
-# Перевіряємо кожну політику
-for policy in exception_policies:
+# Перебираємо всі політики незалежно від типу
+for policy in policies:
     policy_id = policy.get("id")
     policy_name = policy.get("name")
-    print(f"Перевіряємо політику: {policy_name} (ID: {policy_id})")
 
     detail_res = requests.get(
         f"{BASE_URL}/policies/exceptions/{policy_id}",
         headers=headers,
         verify=False
     )
-    print(f"Статус: {detail_res.status_code}")
 
     if detail_res.status_code == 200:
-        detail = detail_res.json()
-        print(json.dumps(detail, indent=2)[:500])
-
-        # Шукаємо хеш
-        raw = json.dumps(detail)
+        raw = json.dumps(detail_res.json())
         if CHECK_HASH.lower() in raw.lower():
-            print(f"\033[32m[V] Хеш {CHECK_HASH} ЗНАЙДЕНО в політиці {policy_name}!\033[0m")
+            print(f"\033[32m[V] Хеш знайдено в політиці: {policy_name}\033[0m")
+            print(json.dumps(detail_res.json(), indent=2)[:500])
         else:
-            print(f"\033[33m[?] Хеш {CHECK_HASH} не знайдено в політиці {policy_name}\033[0m")
+            print(f"\033[90m[-] Не знайдено в: {policy_name}\033[0m")
     else:
-        print(f"Помилка: {detail_res.text[:200]}")
-    print()
+        print(f"\033[90m[-] {policy_name} | статус: {detail_res.status_code}\033[0m")

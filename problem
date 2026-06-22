@@ -1,13 +1,13 @@
 Авторизація успішна
 
-URL: https://************:8446/sepm/api/v1/policies/exceptions
+params: {}
 Статус: 500 | {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}
 
-URL: https://************:8446/sepm/api/v1/exceptions
-Статус: 404 | <!doctype html><html lang="en"><head><title>HTTP Status 404 – Not Found</title><style type="text/css">body {font-family:Tahoma,Arial,sans-serif;} h1, h2, h3, b {color:white;background-color:#525D76;}
+params: {'pageSize': 10}
+Статус: 500 | {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}
 
-URL: https://************:8446/sepm/api/v1/policy-objects/exceptions
-Статус: 404 | <!doctype html><html lang="en"><head><title>HTTP Status 404 – Not Found</title><style type="text/css">body {font-family:Tahoma,Arial,sans-serif;} h1, h2, h3, b {color:white;background-color:#525D76;}
+params: {'pageSize': 10, 'pageIndex': 1}
+Статус: 500 | {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}
 
-URL: https://************:8446/sepm/api/v1/policies?type=exceptions
-Статус: 404 | <!doctype html><html lang="en"><head><title>HTTP Status 404 – Not Found</title><style type="text/css">body {font-family:Tahoma,Arial,sans-serif;} h1, h2, h3, b {color:white;background-color:#525D76;}
+params: {'domain': 'Default'}
+Статус: 500 | {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}

@@ -18,13 +18,24 @@ auth_res = requests.post(
 )
 token = auth_res.json()["token"]
 headers = {"Authorization": f"Bearer {token}"}
-print("Авторизація успішна")
+print("Авторизація успішна\n")
 
-# Дивимось всі fingerprint lists
-res = requests.get(
-    f"{BASE_URL}/policy-objects/fingerprints",
-    headers=headers,
-    verify=False
-)
-print(f"Статус: {res.status_code}")
-print(json.dumps(res.json(), indent=2))
+tests = [
+    ("GET", f"{BASE_URL}/policy-objects/fingerprints", {"name": ""}),
+    ("GET", f"{BASE_URL}/policy-objects/fingerprints", {"name": "*"}),
+    ("GET", f"{BASE_URL}/policy-objects/fingerprints", {"name": "%"}),
+    ("GET", f"{BASE_URL}/policy-objects/fingerprints/list", {}),
+    ("GET", f"{BASE_URL}/policies/fingerprints", {}),
+    ("GET", f"{BASE_URL}/policy-objects/fingerprints", {"pageSize": 100}),
+    ("GET", f"{BASE_URL}/policy-objects/fingerprints", {"name": "Default"}),
+    ("GET", f"{BASE_URL}/fingerprints", {}),
+]
+
+for i, (method, url, params) in enumerate(tests, 1):
+    try:
+        res = requests.request(method, url, params=params, headers=headers, verify=False)
+        print(f"Тест {i}: {res.status_code} | URL: {url} | params: {params}")
+        print(f"         {res.text[:200]}")
+    except Exception as e:
+        print(f"Тест {i}: Помилка — {e}")
+    print()

@@ -19,21 +19,18 @@ token = auth_res.json()["token"]
 headers = {"Authorization": f"Bearer {token}"}
 print("Авторизація успішна\n")
 
-# Пробуємо різні параметри для /policies/exceptions
-tests = [
-    {},
-    {"pageSize": 10},
-    {"pageSize": 10, "pageIndex": 1},
-    {"domain": "Default"},
-]
-
-for params in tests:
-    res = requests.get(
-        f"{BASE_URL}/policies/exceptions",
-        params=params,
-        headers=headers,
-        verify=False
-    )
-    print(f"params: {params}")
-    print(f"Статус: {res.status_code} | {res.text[:300]}")
-    print()
+# Отримуємо всі політики
+res = requests.get(
+    f"{BASE_URL}/policies/summary",
+    params={"pageSize": 100},
+    headers=headers,
+    verify=False
+)
+print(f"Статус: {res.status_code}")
+if res.status_code == 200:
+    policies = res.json().get("content", [])
+    print(f"Політик знайдено: {len(policies)}\n")
+    for p in policies:
+        print(f"  name: {p.get('name')} | type: {p.get('policyType')} | id: {p.get('id')}")
+else:
+    print(res.text[:300])

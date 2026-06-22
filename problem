@@ -1,6 +1,25 @@
 Авторизація успішна
-Статус: 400
-{
-  "errorCode": "400",
-  "appErrorCode": "",
-  "errorMessage": "name argument must not be empty."
+
+Тест 1: 400 | URL: https://*******:8446/sepm/api/v1/policy-objects/fingerprints | params: {'name': ''}
+         {"errorCode":"400","appErrorCode":"","errorMessage":"name argument must not be empty."}
+
+Тест 2: 410 | URL: https://*******:8446/sepm/api/v1/policy-objects/fingerprints | params: {'name': '*'}
+         {"errorCode":"410","appErrorCode":"","errorMessage":"Fingerprint list with ID * do not exist"}
+
+Тест 3: 410 | URL: https://*******:8446/sepm/api/v1/policy-objects/fingerprints | params: {'name': '%'}
+         {"errorCode":"410","appErrorCode":"","errorMessage":"Fingerprint list with ID % do not exist"}
+
+Тест 4: 400 | URL: https://*******:8446/sepm/api/v1/policy-objects/fingerprints/list | params: {}
+         {"errorCode":"400","appErrorCode":"","errorMessage":"Input argument is not a valid GUID: list"}
+
+Тест 5: 404 | URL: https://*******:8446/sepm/api/v1/policies/fingerprints | params: {}
+         <!doctype html><html lang="en"><head><title>HTTP Status 404 – Not Found</title><style type="text/css">body {font-family:Tahoma,Arial,sans-serif;} h1, h2, h3, b {color:white;background-color:#525D76;}
+
+Тест 6: 400 | URL: https://*******:8446/sepm/api/v1/policy-objects/fingerprints | params: {'pageSize': 100}
+         {"errorCode":"400","appErrorCode":"","errorMessage":"name argument must not be empty."}
+
+Тест 7: 410 | URL: https://*******:8446/sepm/api/v1/policy-objects/fingerprints | params: {'name': 'Default'}
+         {"errorCode":"410","appErrorCode":"","errorMessage":"Fingerprint list with ID Default do not exist"}
+
+Тест 8: 404 | URL: https://*******:8446/sepm/api/v1/fingerprints | params: {}
+         <!doctype html><html lang="en"><head><title>HTTP Status 404 – Not Found</title><style type="text/css">body {font-family:Tahoma,Arial,sans-serif;} h1, h2, h3, b {color:white;background-color:#525D76;}

@@ -1,0 +1,34 @@
+import requests
+import urllib3
+import json
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+SEPM_IP = "*********"
+USER    = "***********"
+PASS    = "**********"
+GROUP_ID = "сюди_встав_один_з_ід_груп"
+
+BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
+
+auth_res = requests.post(
+    f"{BASE_URL}/identity/authenticate",
+    json={"username": USER, "password": PASS, "domain": ""},
+    verify=False
+)
+token = auth_res.json()["token"]
+headers = {"Authorization": f"Bearer {token}"}
+print("Авторизація успішна\n")
+
+tests = [
+    f"{BASE_URL}/groups/{GROUP_ID}/fingerprints",
+    f"{BASE_URL}/groups/{GROUP_ID}/policy-objects/fingerprints",
+    f"{BASE_URL}/groups/{GROUP_ID}/lockdown",
+    f"{BASE_URL}/policy-objects/fingerprints?groupId={GROUP_ID}",
+]
+
+for url in tests:
+    res = requests.get(url, headers=headers, verify=False)
+    print(f"URL: {url}")
+    print(f"Статус: {res.status_code} | {res.text[:200]}")
+    print()

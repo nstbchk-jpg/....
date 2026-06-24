@@ -10,38 +10,48 @@ PASS    = "**********"
 
 BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
 
+print("1. Авторизація...")
 auth_res = requests.post(
     f"{BASE_URL}/identity/authenticate",
     json={"username": USER, "password": PASS, "domain": ""},
     verify=False
 )
+print(f"   Статус: {auth_res.status_code}")
 token = auth_res.json()["token"]
 headers = {"Authorization": f"Bearer {token}"}
 
-# Отримуємо одну політику
+print("2. Отримання політик...")
 res = requests.get(
     f"{BASE_URL}/policies/summary",
     params={"pageSize": 100},
     headers=headers,
     verify=False
 )
-
+print(f"   Статус: {res.status_code}")
 policies = res.json().get("content", [])
-first_policy = policies[0]
-policy_id = first_policy.get("id")
-policy_name = first_policy.get("name")
+print(f"   Знайдено: {len(policies)}")
 
-# Отримуємо деталі
-detail_res = requests.get(
-    f"{BASE_URL}/policies/exceptions/{policy_id}",
-    headers=headers,
-    verify=False
-)
-
-if detail_res.status_code == 200:
-    policy_data = detail_res.json()
-    print(f"Політика: {policy_name}\n")
-    print("Estructura 'whitelistrules':")
-    print(json.dumps(policy_data.get("whitelistrules", [])[:1], indent=2))
-    print("\nУсі ключі політики:")
-    print(json.dumps(list(policy_data.keys()), indent=2))
+if policies:
+    first_policy = policies[0]
+    policy_id = first_policy.get("id")
+    policy_name = first_policy.get("name")
+    print(f"3. Перша політика: {policy_name}")
+    
+    print("4. Отримання деталей...")
+    detail_res = requests.get(
+        f"{BASE_URL}/policies/exceptions/{policy_id}",
+        headers=headers,
+        verify=False
+    )
+    print(f"   Статус: {detail_res.status_code}")
+    
+    if detail_res.status_code == 200:
+        policy_data = detail_res.json()
+        print("\n5. Структура whitelistrules:")
+        print(json.dumps(policy_data.get("whitelistrules", [])[:1], indent=2))
+        print("\n6. Усі ключі:")
+        print(list(policy_data.keys()))
+    else:
+        print(f"   Помилка: {detail_res.text[:300]}")
+else:
+    print("Політик не знайдено")

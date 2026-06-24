@@ -1,11 +1,71 @@
+ Хеш: *
+    Статус дії: Дозволено (IGNORE)
+
+←[32m[+] Додано в політики (10):←[0m
+      • *
+      • *
+      • *
+      • *
+      • * *
+      • * * *
+      • * *
+      • *
+      • *
+      • * *** *
+
+←[33m[i] Вже існує в політиках (6):←[0m
+      • * * *
+      • *
+      • * * *
+      • * * *
+      • * * *
+      • * * * + *
+
+←[90m[i] Всього політик: 286←[0m
+*
 ←[90m[-] Авторизація...←[0m
 ←[32m[V] Авторизація успішна.←[0m
 
 ←[90m[-] Отримання список політик...←[0m
 ←[32m[V] Знайдено політик: 286←[0m
 
-Traceback (most recent call last):
-  File "************", line 51, in <module>
-    action_type = "Дозволено (IGNORE)" if ADD_TO_WHITELIST else "Блоковано (QUARANTINE)"
-                                          ^^^^^^^^^^^^^^^^
-NameError: name 'ADD_TO_WHITELIST' is not defined
+    ←[31m[!] Помилка 400: {"errorCode":"400","appErrorCode":"","errorMessage":"'desc' Description length is max 1024."}←[0m
+    ←[31m[!] Помилка 400: {"errorCode":"400","appErrorCode":"","errorMessage":"'desc' Description length is max 1024."}←[0m
+    ←[32m[+] Успішно: * +  *←[0m
+    ←[31m[!] Помилка 400: {"errorCode":"400","appErrorCode":"","errorMessage":"'desc' Description length is max 1024."}←[0m
+    ←[32m[+] Успішно: Domain Controller Exceptions policy←[0m
+    ←[31m[!] Помилка 400: {"errorCode":"400","appErrorCode":"","errorMessage":"'desc' Description length is max 1024."}←[0m
+    ←[32m[+] Успішно: *←[0m
+    ←[31m[!] Помилка 400: {"errorCode":"400","appErrorCode":"","errorMessage":"'desc' Description length is max 1024."}←[0m
+    ←[31m[!] Помилка 400: {"errorCode":"400","appErrorCode":"","errorMessage":"'desc' Description length is max 1024."}←[0m
+    ←[31m[!] Помилка 400: {"errorCode":"400","appErrorCode":"","errorMessage":"'desc' Description length is max 1024."}←[0m
+    ←[32m[+] Успішно: *←[0m
+    ←[32m[+] Успішно: * *←[0m
+    ←[32m[+] Успішно: * * *←[0m
+    ←[31m[!] Помилка 400: {"errorCode":"400","appErrorCode":"","errorMessage":"Duplicate blacklist or whitelist with * were detected!"}←[0m
+    ←[32m[+] Успішно: * *←[0m
+    ←[32m[+] Успішно: *←[0m
+    ←[31m[!] Помилка 400: {"errorCode":"400","appErrorCode":"","errorMessage":"'desc' Description length is max 1024."}←[0m
+    ←[31m[!] Помилка 400: {"errorCode":"400","appErrorCode":"","errorMessage":"'desc' Description length is max 1024."}←[0m
+    ←[31m[!] Помилка 400: {"errorCode":"400","appErrorCode":"","errorMessage":"'desc' Description length is max 1024."}←[0m
+    ←[32m[+] Успішно: *←[0m
+    ←[32m[+] Успішно: * * * *←[0m
+
+====================================================================================================
+ПОЛІТИКА                                 | СТАТУС               | ДІЇ
+====================================================================================================
+* policy              | ←[90m✗ Помилка           ←[0m | -
+* policy                   | ←[33m✓ Існує             ←[0m | Дозволено (IGNORE)
+*                                   | ←[33m✓ Існує             ←[0m | Дозволено (IGNORE)
+* policy            | ←[90m✗ Помилка           ←[0m | -
+* policy                  | ←[33m✓ Існує             ←[0m | Дозволено (IGNORE)
+* policy *                 | ←[90m✗ Помилка           ←[0m | -
+*                          | ←[32m✓ Додано            ←[0m | Дозволено (IGNORE)
+*                                   | ←[90m✗ Помилка           ←[0m | -
+*r Exceptions policy      | ←[32m✓ Додано            ←[0m | Дозволено (IGNORE)
+* Exceptions policy                   | ←[33m✓ Існує             ←[0m | Дозволено (IGNORE)
+* Exception Policy                    | ←[90m✗ Помилка           ←[0m | -
+* Exceptions policy                   | ←[33m✓ Існує             ←[0m | Дозволено (IGNORE)
+*                             | ←[32m✓ Додано            ←[0m | Дозволено (IGNORE)
+* *                               | ←[90m✗ Помилка           ←[0m | -
+* policy *           | ←[90m✗ Помилка           ←[0m | -

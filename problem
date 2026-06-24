@@ -1,13 +1,7 @@
-Авторизація успішна
-
-params: {}
-Статус: 500 | {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}
-
-params: {'pageSize': 10}
-Статус: 500 | {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}
-
-params: {'pageSize': 10, 'pageIndex': 1}
-Статус: 500 | {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}
-
-params: {'domain': 'Default'}
-Статус: 500 | {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}
+python .\policy.py
+python : The term 'python' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:1
++ python .\policy.py
++ ~~~~~~
+    + CategoryInfo          : ObjectNotFound: (python:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException

@@ -1,7 +1,154 @@
-python .\policy.py
-python : The term 'python' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
-At line:1 char:1
-+ python .\policy.py
-+ ~~~~~~
-    + CategoryInfo          : ObjectNotFound: (python:String) [], CommandNotFoundException
-    + FullyQualifiedErrorId : CommandNotFoundException
+{
+        "rulestate": {
+          "enabled": true
+        },
+        "processfile": {
+          "sha2": "*******************",
+          "name": "************",
+          "company": "************",
+          "size": 124359943,
+          "description": null,
+          "directory": "***************"
+        },
+        "action": "IGNORE"
+      },
+	  
+	  {
+        "rulestate": {
+          "enabled": true
+        },
+        "processfile": {
+          "sha2": "*****************",
+          "name": "E**********e",
+          "company": "",
+          "size": 6787138,
+          "description": null,
+          "directory": "*************"
+        },
+        "action": "IGNORE"
+      }
+    ],
+    "blacklistrules": [
+      {
+        "rulestate": {
+          "enabled": true
+        },
+        "processfile": {
+          "sha2": "**************",
+          "name": "***********.exe",
+          "company": "",
+          "size": 117760,
+          "description": null,
+          "directory": "***************"
+        },
+        "action": "QUARANTINE"
+      },
+      {
+        "rulestate": {
+          "enabled": true
+        },
+        "processfile": {
+          "sha2": "*************",
+          "name": "*************",
+          "company": "**********",
+          "size": 315024,
+          "description": null,
+          "directory": "*****************"
+        },
+        "action": "QUARANTINE"
+      }
+    ],
+    "applications_to_monitor": [
+      {
+        "rulestate": {
+          "enabled": true
+        },
+        "name": "*************"
+      },
+      {
+        "rulestate": {
+          "enabled": true
+        },
+        "name": "************"
+      },
+      {
+        "rulestate": {
+          "enabled": true
+        },
+        "name": "************"
+      },
+      {
+        "rulestate": {
+          "enabled": true
+        },
+        "name": "**********.exe"
+      },
+      {
+        "rulestate": {
+          "enabled": true
+        },
+        "name": "*******.exe"
+      },
+      {
+        "rulestate": {
+          "enabled": true
+        },
+        "name": "*********.exe"
+      },
+      {
+        "rulestate": {
+          "enabled": true
+        },
+        "name": "********.exe"
+      },
+      {
+        "rulestate": {
+          "enabled": true
+        },
+        "name": "********.exe"
+      }
+    ],
+    "mac": {
+      "files": []
+    },
+    "linux": {
+      "directories": [],
+      "extension_list": null
+    },
+    "extension_list": null,
+    "knownrisks": [],
+    "tamper_files": [
+      {
+        "sonar": null,
+        "rulestate": {
+          "enabled": true
+        },
+        "scancategory": null,
+        "pathvariable": "[NONE]",
+        "path": "***********.exe",
+        "applicationcontrol": null,
+        "securityrisk": null,
+        "SONAR": null,
+        "recursive": null
+      }
+    ],
+    "dns_and_host_applications": [],
+    "dns_and_host_blacklistrules": []
+  },
+  "lockedoptions": {
+    "knownrisk": true,
+    "extension": true,
+    "file": true,
+    "domain": true,
+    "securityrisk": false,
+    "sonar": true,
+    "application": true,
+    "dnshostfile": true,
+    "certificate": true
+  },
+  "enabled": true,
+  "desc": "Modified  from Created automatically during product installation.",
+  "name": "***********",
+  "lastmodifiedtime": **********
+}
+←[90m[-] Не знайдено в: *********** policy←[0m

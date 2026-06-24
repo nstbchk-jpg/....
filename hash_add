@@ -149,6 +149,18 @@ print("="*100)
 print(f"\n\033[34m[i] ПІДСУМОК:\033[0m")
 print(f"    Хеш: {CHECK_HASH}")
 print(f"    Статус дії: {action_type}")
-print(f"    Додано в {len(added_policies)} політики")
-print(f"    Вже існує в {len(existing_policies)} політиках")
-print(f"    Всього політик: {len(policies)}")
+print(f"\n\033[32m[+] Додано в політики ({len(added_policies)}):\033[0m")
+if added_policies:
+    for p in added_policies:
+        print(f"      • {p}")
+else:
+    print(f"      (жодної)")
+
+print(f"\n\033[33m[i] Вже існує в політиках ({len(existing_policies)}):\033[0m")
+if existing_policies:
+    for p in existing_policies:
+        print(f"      • {p}")
+else:
+    print(f"      (жодної)")
+
+print(f"\n\033[90m[i] Всього політик: {len(policies)}\033[0m")

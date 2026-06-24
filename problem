@@ -1,23 +1,9 @@
-1. Авторизація...
-   Статус: 200
-2. Отримання політик...
-   Статус: 200
-   Знайдено: 286
-3. Перша політика: ************* policy
-4. Отримання деталей...
-   Статус: 500
-   Помилка: {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}
-*****************.py
-1. Авторизація...
-2. Отримання політик...
-   Знайдено: 286
+Політика: ********** Exceptions policy
 
-3. Знайшло робочу політику: *************** policy
-   whitelistrules: 0
-   blacklistrules: 0
+configuration ключі:
+['files', 'non_pe_rules', 'directories', 'webdomains', 'certificates', 'applications', 'blacklistrules', 'applications_to_monitor', 'mac', 'linux', 'extension_list', 'knownrisks', 'tamper_files', 'dns_and_host_applications', 'dns_and_host_blacklistrules']
 
-4. Приклад whitelistrules:
+whitelistrules в configuration:
 []
 
-5. Ключі політики:
-['sources', 'configuration', 'lockedoptions', 'enabled', 'desc', 'name', 'lastmodifiedtime']
+Пеший whitelistrule повністю:

@@ -3,7 +3,21 @@
 2. Отримання політик...
    Статус: 200
    Знайдено: 286
-3. Перша політика: ********************
+3. Перша політика: ************* policy
 4. Отримання деталей...
    Статус: 500
    Помилка: {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}
+*****************.py
+1. Авторизація...
+2. Отримання політик...
+   Знайдено: 286
+
+3. Знайшло робочу політику: *************** policy
+   whitelistrules: 0
+   blacklistrules: 0
+
+4. Приклад whitelistrules:
+[]
+
+5. Ключі політики:
+['sources', 'configuration', 'lockedoptions', 'enabled', 'desc', 'name', 'lastmodifiedtime']

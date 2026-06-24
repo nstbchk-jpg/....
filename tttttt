@@ -38,12 +38,21 @@ for policy in policies:
     
     if detail_res.status_code == 200:
         policy_data = detail_res.json()
-        config = policy_data.get("configuration", {})
+        raw = json.dumps(policy_data)
         
-        blacklist = config.get("blacklistrules", [])
-        if blacklist:
-            print(f"Політика: {policy_name}")
-            print(f"blacklistrules: {len(blacklist)}")
-            print(f"\nПеший blacklistrule:")
-            print(json.dumps(blacklist[0], indent=2))
+        # Шукаємо політику де є whitelistrules або blacklistrules на верхньому рівні
+        if "whitelistrules" in raw or ("blacklistrules" in raw and len(policy_data.get("blacklistrules", [])) > 0):
+            print(f"Знайшло: {policy_name}")
+            print(f"Топ-рівневі ключі: {list(policy_data.keys())}")
+            print(f"\nwhitelistrules: {len(policy_data.get('whitelistrules', []))}")
+            print(f"blacklistrules: {len(policy_data.get('blacklistrules', []))}")
+            
+            if policy_data.get('whitelistrules'):
+                print(f"\nПеший whitelistrule:")
+                print(json.dumps(policy_data.get('whitelistrules')[0], indent=2))
+            
+            if policy_data.get('blacklistrules'):
+                print(f"\nПеший blacklistrule:")
+                print(json.dumps(policy_data.get('blacklistrules')[0], indent=2))
+            
             break

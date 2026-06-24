@@ -1,59 +1,9 @@
-←[90m[-] Авторизація...←[0m
-←[32m[V] Авторизація успішна.←[0m
-
-←[90m[-] Отримання список політик...←[0m
-←[32m[V] Знайдено політик: 286←[0m
-
-    ←[31m[!] ****policy: 'desc' Description length is max 1024.←[0m
-    ←[31m[!] ****: 'desc' Description length is max 1024.←[0m
-    ←[31m[!] Хеш НЕ знайдено після запису: **** ************←[0m
-    ←[31m[!] ****: 'desc' Description length is max 1024.←[0m
-    ←[31m[!] Хеш НЕ знайдено після запису: ****Exceptions policy←[0m
-    ←[31m[!] ****Exception Policy: 'desc' Description length is max 1024.←[0m
-    ←[31m[!] Хеш НЕ знайдено після запису: ****←[0m
-    ←[31m[!] ****: 'desc' Description length is max 1024.←[0m
-    ←[31m[!] ****Exceptions policy Server: 'desc' Description length is max 1024.←[0m
-    ←[31m[!] **** ****: 'desc' Description length is max 1024.←[0m
-    ←[31m[!] Хеш НЕ знайдено після запису: ****←[0m
-    ←[31m[!] Хеш НЕ знайдено після запису: ****←[0m
-    ←[31m[!] Хеш НЕ знайдено після запису: ****←[0m
-    ←[31m[!] **** ****: Duplicate blacklist or whitelist with ****←[0m
-    ←[31m[!] Хеш НЕ знайдено після запису: ****←[0m
-    ←[31m[!] Хеш НЕ знайдено після запису: ****←[0m
-    ←[31m[!] **** Exception Policy: 'desc' Description length is max 1024.←[0m
-	
-	
-	
-	←[34m[i] ПІДСУМОК:←[0m
-    Хеш: **********************
-    Статус дії: Дозволено (IGNORE)
-
-←[32m[+] Додано в політики (0):←[0m
-      (жодної)
-
-←[33m[i] Вже існує в політиках (6):←[0m
-      • Home Exceptions policy
-      • ******************
-      • ****************** Exceptions policy
-      • ****************** Exceptions policy
-      • ****************** Exceptions policy
-      • ****************** Exceptions policy + ******************
-
-←[31m[!] Помилки (17):←[0m
-      • ****************** exeptions for test policy: 'desc' Description length is max 1024.
-      • ****************** policy 32vcs: 'desc' Description length is max 1024.
-      • ****************** +  ******************: Хеш не підтвердився
-      • ******************: 'desc' Description length is max 1024.
-      •************************************ ****************** Exceptions policy: Хеш не підтвердився
-      • ****************** Exception Policy: 'desc' Description length is max 1024.
-      • ******************: Хеш не підтвердився
-      • ****************** ******************: 'desc' Description length is max 1024.
-      • ****************** ****************** ****************** Server: 'desc' Description length is max 1024.
-      • ****************** ******************: 'desc' Description length is max 1024.
-      • ******************: Хеш не підтвердився
-      • ****************** ******************: Хеш не підтвердився
-      • ****************** ****************** policy: Хеш не підтвердився
-      • ****************** ******************: Duplicate blacklist or whitelist with ******************
-      • ****************** policy: Хеш не підтвердився
-      • ******************: Хеш не підтвердився
-      • ****************** Exception Policy: 'desc' Description length is max 1024.
+1. Авторизація...
+   Статус: 200
+2. Отримання політик...
+   Статус: 200
+   Знайдено: 286
+3. Перша політика: ********************
+4. Отримання деталей...
+   Статус: 500
+   Помилка: {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}

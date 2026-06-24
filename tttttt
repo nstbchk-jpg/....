@@ -10,7 +10,6 @@ PASS    = "**********"
 
 BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
 
-print("1. Авторизація...")
 auth_res = requests.post(
     f"{BASE_URL}/identity/authenticate",
     json={"username": USER, "password": PASS, "domain": ""},
@@ -19,7 +18,6 @@ auth_res = requests.post(
 token = auth_res.json()["token"]
 headers = {"Authorization": f"Bearer {token}"}
 
-print("2. Отримання політик...")
 res = requests.get(
     f"{BASE_URL}/policies/summary",
     params={"pageSize": 100},
@@ -27,10 +25,8 @@ res = requests.get(
     verify=False
 )
 policies = res.json().get("content", [])
-print(f"   Знайдено: {len(policies)}")
 
 # Знаходимо першу робочу політику
-found = False
 for policy in policies:
     policy_id = policy.get("id")
     policy_name = policy.get("name")
@@ -43,15 +39,13 @@ for policy in policies:
     
     if detail_res.status_code == 200:
         policy_data = detail_res.json()
-        print(f"\n3. Знайшло робочу політику: {policy_name}")
-        print(f"   whitelistrules: {len(policy_data.get('whitelistrules', []))}")
-        print(f"   blacklistrules: {len(policy_data.get('blacklistrules', []))}")
-        print(f"\n4. Приклад whitelistrules:")
-        print(json.dumps(policy_data.get("whitelistrules", [])[:1], indent=2))
-        print(f"\n5. Ключі політики:")
-        print(list(policy_data.keys()))
-        found = True
+        print(f"Політика: {policy_name}\n")
+        print("configuration ключі:")
+        config = policy_data.get("configuration", {})
+        print(list(config.keys()))
+        print(f"\nwhitelistrules в configuration:")
+        print(json.dumps(config.get("whitelistrules", [])[:1], indent=2))
+        print(f"\nПеший whitelistrule повністю:")
+        if config.get("whitelistrules"):
+            print(json.dumps(config.get("whitelistrules")[0], indent=2))
         break
-
-if not found:
-    print("Жодна політика не відкривається")

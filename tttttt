@@ -16,7 +16,6 @@ auth_res = requests.post(
     json={"username": USER, "password": PASS, "domain": ""},
     verify=False
 )
-print(f"   Статус: {auth_res.status_code}")
 token = auth_res.json()["token"]
 headers = {"Authorization": f"Bearer {token}"}
 
@@ -27,31 +26,32 @@ res = requests.get(
     headers=headers,
     verify=False
 )
-print(f"   Статус: {res.status_code}")
 policies = res.json().get("content", [])
 print(f"   Знайдено: {len(policies)}")
 
-if policies:
-    first_policy = policies[0]
-    policy_id = first_policy.get("id")
-    policy_name = first_policy.get("name")
-    print(f"3. Перша політика: {policy_name}")
+# Знаходимо першу робочу політику
+found = False
+for policy in policies:
+    policy_id = policy.get("id")
+    policy_name = policy.get("name")
     
-    print("4. Отримання деталей...")
     detail_res = requests.get(
         f"{BASE_URL}/policies/exceptions/{policy_id}",
         headers=headers,
         verify=False
     )
-    print(f"   Статус: {detail_res.status_code}")
     
     if detail_res.status_code == 200:
         policy_data = detail_res.json()
-        print("\n5. Структура whitelistrules:")
+        print(f"\n3. Знайшло робочу політику: {policy_name}")
+        print(f"   whitelistrules: {len(policy_data.get('whitelistrules', []))}")
+        print(f"   blacklistrules: {len(policy_data.get('blacklistrules', []))}")
+        print(f"\n4. Приклад whitelistrules:")
         print(json.dumps(policy_data.get("whitelistrules", [])[:1], indent=2))
-        print("\n6. Усі ключі:")
+        print(f"\n5. Ключі політики:")
         print(list(policy_data.keys()))
-    else:
-        print(f"   Помилка: {detail_res.text[:300]}")
-else:
-    print("Політик не знайдено")
+        found = True
+        break
+
+if not found:
+    print("Жодна політика не відкривається")

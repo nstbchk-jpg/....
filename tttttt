@@ -26,7 +26,6 @@ res = requests.get(
 )
 policies = res.json().get("content", [])
 
-# Знаходимо першу робочу політику
 for policy in policies:
     policy_id = policy.get("id")
     policy_name = policy.get("name")
@@ -39,13 +38,12 @@ for policy in policies:
     
     if detail_res.status_code == 200:
         policy_data = detail_res.json()
-        print(f"Політика: {policy_name}\n")
-        print("configuration ключі:")
         config = policy_data.get("configuration", {})
-        print(list(config.keys()))
-        print(f"\nwhitelistrules в configuration:")
-        print(json.dumps(config.get("whitelistrules", [])[:1], indent=2))
-        print(f"\nПеший whitelistrule повністю:")
-        if config.get("whitelistrules"):
-            print(json.dumps(config.get("whitelistrules")[0], indent=2))
-        break
+        
+        blacklist = config.get("blacklistrules", [])
+        if blacklist:
+            print(f"Політика: {policy_name}")
+            print(f"blacklistrules: {len(blacklist)}")
+            print(f"\nПеший blacklistrule:")
+            print(json.dumps(blacklist[0], indent=2))
+            break

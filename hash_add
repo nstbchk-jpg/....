@@ -152,4 +152,3 @@ print(f"    Статус дії: {action_type}")
 print(f"    Додано в {len(added_policies)} політики")
 print(f"    Вже існує в {len(existing_policies)} політиках")
 print(f"    Всього політик: {len(policies)}")
-</parameter>

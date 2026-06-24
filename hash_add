@@ -4,22 +4,39 @@ import json
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+# ============================================================
+# Налаштування
+# ============================================================
 SEPM_IP = "*********"
 USER    = "***********"
 PASS    = "**********"
-CHECK_HASH = "сюди_встав_хеш"
+CHECK_HASH = "сюди_встав_SHA2_хеш"
+ADD_TO_WHITELIST = True  # True = whitelist (IGNORE), False = blacklist (QUARANTINE)
 
 BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
 
-auth_res = requests.post(
-    f"{BASE_URL}/identity/authenticate",
-    json={"username": USER, "password": PASS, "domain": ""},
-    verify=False
-)
-token = auth_res.json()["token"]
-headers = {"Authorization": f"Bearer {token}"}
-print("Авторизація успішна\n")
+# ============================================================
+# Авторизація
+# ============================================================
+print(f"\033[90m[-] Авторизація...\033[0m")
+try:
+    auth_res = requests.post(
+        f"{BASE_URL}/identity/authenticate",
+        json={"username": USER, "password": PASS, "domain": ""},
+        verify=False
+    )
+    auth_res.raise_for_status()
+    token = auth_res.json()["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    print("\033[32m[V] Авторизація успішна.\033[0m\n")
+except requests.RequestException as e:
+    print(f"\033[31m[!] Помилка авторизації: {e}\033[0m")
+    exit(1)
 
+# ============================================================
+# Отримання всіх політик
+# ============================================================
+print(f"\033[90m[-] Отримання список політик...\033[0m")
 res = requests.get(
     f"{BASE_URL}/policies/summary",
     params={"pageSize": 100},
@@ -28,7 +45,14 @@ res = requests.get(
 )
 
 policies = res.json().get("content", [])
-print(f"Всього політик: {len(policies)}\n")
+print(f"\033[32m[V] Знайдено політик: {len(policies)}\033[0m\n")
+
+# ============================================================
+# Перевірка і додавання хеша
+# ============================================================
+added_policies = []
+existing_policies = []
+action_type = "Дозволено (IGNORE)" if ADD_TO_WHITELIST else "Блоковано (QUARANTINE)"
 
 for policy in policies:
     policy_id = policy.get("id")
@@ -41,11 +65,91 @@ for policy in policies:
     )
 
     if detail_res.status_code == 200:
-        raw = json.dumps(detail_res.json())
+        policy_data = detail_res.json()
+        raw = json.dumps(policy_data)
+        
+        # Перевіряємо чи хеш уже є
         if CHECK_HASH.lower() in raw.lower():
-            print(f"\033[32m[V] Хеш знайдено в політиці: {policy_name}\033[0m")
-            print(json.dumps(detail_res.json(), indent=2))
+            existing_policies.append(policy_name)
         else:
-            print(f"\033[90m[-] Не знайдено в: {policy_name}\033[0m")
+            # Підготовка до додавання
+            if ADD_TO_WHITELIST:
+                rule_list = policy_data.get("whitelistrules", [])
+                action = "IGNORE"
+            else:
+                rule_list = policy_data.get("blacklistrules", [])
+                action = "QUARANTINE"
+            
+            # Новий хеш для додавання
+            new_rule = {
+                "rulestate": {
+                    "enabled": True
+                },
+                "processfile": {
+                    "sha2": CHECK_HASH,
+                    "name": "unknown",
+                    "company": "",
+                    "size": 0,
+                    "description": None,
+                    "directory": ""
+                },
+                "action": action
+            }
+            
+            # Додаємо до списку
+            rule_list.append(new_rule)
+            
+            # Оновлюємо політику
+            if ADD_TO_WHITELIST:
+                policy_data["whitelistrules"] = rule_list
+            else:
+                policy_data["blacklistrules"] = rule_list
+            
+            # Відправляємо оновлену політику
+            update_res = requests.put(
+                f"{BASE_URL}/policies/exceptions/{policy_id}",
+                json=policy_data,
+                headers=headers,
+                verify=False
+            )
+            
+            if update_res.status_code in (200, 201):
+                added_policies.append(policy_name)
+
+# ============================================================
+# Вивід таблиці
+# ============================================================
+print("\n" + "="*100)
+print(f"{'ПОЛІТИКА':<40} | {'СТАТУС':<20} | {'ДІЇ':<30}")
+print("="*100)
+
+for policy in policies:
+    policy_name = policy.get("name")
+    
+    if policy_name in added_policies:
+        status = "✓ Додано"
+        status_color = "\033[32m"
+        action = action_type
+    elif policy_name in existing_policies:
+        status = "✓ Існує"
+        status_color = "\033[33m"
+        action = action_type
     else:
-        print(f"\033[90m[-] {policy_name} | статус: {detail_res.status_code}\033[0m")
+        status = "✗ Помилка"
+        status_color = "\033[90m"
+        action = "-"
+    
+    print(f"{policy_name:<40} | {status_color}{status:<20}\033[0m | {action:<30}")
+
+print("="*100)
+
+# ============================================================
+# Підсумок
+# ============================================================
+print(f"\n\033[34m[i] ПІДСУМОК:\033[0m")
+print(f"    Хеш: {CHECK_HASH}")
+print(f"    Статус дії: {action_type}")
+print(f"    Додано в {len(added_policies)} політики")
+print(f"    Вже існує в {len(existing_policies)} політиках")
+print(f"    Всього політик: {len(policies)}")
+</parameter>

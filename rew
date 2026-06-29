@@ -26,29 +26,27 @@ res = requests.get(
     verify=False
 )
 policies = res.json().get("content", [])
-
-# Берем первую политику
 policy_id = policies[0].get("id")
-policy_name = policies[0].get("name")
 
-print(f"Политика: {policy_name}\n")
+# Пробуем разные структуры
+tests = [
+    {"sha2": CHECK_HASH, "action": "IGNORE"},
+    {"hash": CHECK_HASH, "action": "IGNORE"},
+    {"fingerprint": CHECK_HASH, "action": "IGNORE"},
+    {"sha256": CHECK_HASH, "action": "IGNORE"},
+    {"policyId": policy_id, "sha2": CHECK_HASH, "action": "IGNORE"},
+    {"policy_id": policy_id, "sha2": CHECK_HASH, "action": "IGNORE"},
+    {"sha2": CHECK_HASH},
+    {"sha2": CHECK_HASH, "name": "unknown"},
+]
 
-# Вариант 1
-res1 = requests.post(
-    f"{BASE_URL}/policies/exceptions/{policy_id}/fingerprints",
-    json={"sha2": CHECK_HASH, "action": "IGNORE"},
-    headers=headers,
-    verify=False
-)
-print(f"Вариант 1 - POST /fingerprints: {res1.status_code}")
-print(f"  {res1.text[:200]}\n")
-
-# Вариант 2
-res2 = requests.post(
-    f"{BASE_URL}/policies/exceptions/fingerprints",
-    json={"policyId": policy_id, "sha2": CHECK_HASH, "action": "IGNORE"},
-    headers=headers,
-    verify=False
-)
-print(f"Вариант 2 - POST /fingerprints (global): {res2.status_code}")
-print(f"  {res2.text[:200]}\n")
+for i, body in enumerate(tests, 1):
+    res = requests.post(
+        f"{BASE_URL}/policies/exceptions/fingerprints",
+        json=body,
+        headers=headers,
+        verify=False
+    )
+    print(f"Тест {i}: {res.status_code} | {body}")
+    if res.status_code not in (500, 400):
+        print(f"  УСПЕХ! {res.text[:200]}")

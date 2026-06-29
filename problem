@@ -1,8 +1,9 @@
-
-Авторизація ОК
-
-Traceback (most recent call last):
-  File "\*****", line 44, in <module>
-    pid, pname, data = target
-    ^^^^^^^^^^^^^^^^
-TypeError: cannot unpack non-iterable NoneType object
+ line 27, in <module>
+    policies = requests.get(
+               ~~~~~~~~~~~~~
+    ...<2 lines>...
+        headers=headers, verify=False
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ).json()["content"]
+    ~~~~~~~~^^^^^^^^^^^
+KeyError: 'content'

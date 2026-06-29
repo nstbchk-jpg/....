@@ -1,2 +1,4 @@
-Создание fingerprint list: 400
-{"errorCode":"400","appErrorCode":"","errorMessage":"Invalid MD5 hash value \"*****\""}
+ine 67, in <module>
+    dataA = copy.deepcopy(data)
+            ^^^^
+NameError: name 'copy' is not defined. Did you forget to import 'copy'?

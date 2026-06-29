@@ -1,9 +1,8 @@
-Можливі endpoints для додавання хешу:
-  PUT https://*********:8446/sepm/api/v1/policies/exceptions/{id}
-  POST https://*********:8446/sepm/api/v1/policies/exceptions/{id}/whitelistrules
-  POST https://*********:8446/sepm/api/v1/policies/exceptions/{id}/blacklistrules
-  POST https://*********:8446/sepm/api/v1/policies/exceptions/whitelistrules
-  PUT https://*********:8446/sepm/api/v1/policies/exceptions/whitelistrules/{id}
+Политика: ********** Exceptions policy
 
-SEPM версія: 14.3
-Потрібно перевірити документацію Broadcom для цієї версії
+Первые 2 правила в blacklistrules:
+  action: QUARANTINE
+  name: ****.exe
+
+  action: QUARANTINE
+  name: name

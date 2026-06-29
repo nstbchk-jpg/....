@@ -1,3 +1,9 @@
-←[32m[+] Додано: 11←[0m
-←[33m[i] Існує: 19←[0m
-←[31m[!] Помилок: 4←[0m
+Можливі endpoints для додавання хешу:
+  PUT https://*********:8446/sepm/api/v1/policies/exceptions/{id}
+  POST https://*********:8446/sepm/api/v1/policies/exceptions/{id}/whitelistrules
+  POST https://*********:8446/sepm/api/v1/policies/exceptions/{id}/blacklistrules
+  POST https://*********:8446/sepm/api/v1/policies/exceptions/whitelistrules
+  PUT https://*********:8446/sepm/api/v1/policies/exceptions/whitelistrules/{id}
+
+SEPM версія: 14.3
+Потрібно перевірити документацію Broadcom для цієї версії

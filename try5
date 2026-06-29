@@ -89,7 +89,10 @@ for policy in policies:
             else:
                 policy_data["blacklistrules"] = rule_list
             
-            # НЕ ТРОГАЄМО desc - передаємо політику як є
+            # Обрізаємо desc до 1000 символів
+            if "desc" in policy_data and policy_data["desc"]:
+                policy_data["desc"] = policy_data["desc"][:1000]
+            
             update_res = requests.put(
                 f"{BASE_URL}/policies/exceptions/{policy_id}",
                 json=policy_data,

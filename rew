@@ -17,7 +17,6 @@ auth_res = requests.post(
     json={"username": USER, "password": PASS, "domain": ""},
     verify=False
 )
-print(f"   Статус: {auth_res.status_code}")
 token = auth_res.json()["token"]
 headers = {"Authorization": f"Bearer {token}"}
 
@@ -28,11 +27,9 @@ res = requests.get(
     headers=headers,
     verify=False
 )
-print(f"   Статус: {res.status_code}")
 policies = res.json().get("content", [])
-print(f"   Всего: {len(policies)}")
 
-print("3. Поиск политики с whitelistrules...")
+print("3. Поиск политики с хешами в configuration...")
 count = 0
 for policy in policies:
     policy_id = policy.get("id")
@@ -46,13 +43,18 @@ for policy in policies:
     
     if get_res.status_code == 200:
         policy_data = get_res.json()
+        config = policy_data.get("configuration", {})
         
-        if "whitelistrules" in policy_data:
+        # Ищем в configuration
+        whitelist = config.get("whitelistrules", [])
+        blacklist = config.get("blacklistrules", [])
+        
+        if whitelist or blacklist:
             count += 1
             print(f"   {count}. {policy_name}")
+            print(f"      whitelistrules: {len(whitelist)}, blacklistrules: {len(blacklist)}")
             
             if count >= 3:
                 break
 
-if count == 0:
-    print("   Не найдено политик с whitelistrules!")
+print(f"\nВсего найдено: {count}")

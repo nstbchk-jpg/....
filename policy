@@ -41,9 +41,5 @@ for policy in policies:
         raw = json.dumps(policy_data)
         
         if "sha2" in raw:
-            print(f"Политика: {policy_name}\n")
-            print("Все ключи:")
-            print(list(policy_data.keys()))
-            print("\n\nПолный JSON (первые 2000 символов):")
-            print(json.dumps(policy_data, indent=2)[:2000])
+            print(json.dumps(policy_data, indent=2))
             break

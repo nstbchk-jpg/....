@@ -1,16 +1,12 @@
 import requests
 import urllib3
 import json
-import copy
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-SEPM_IP    = "*********"
-USER       = "***********"
-PASS       = "**********"
-
-# ВИГАДАНИЙ унікальний хеш якого точно ніде немає
-TEST_HASH = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA99"
+SEPM_IP = "*********"
+USER    = "***********"
+PASS    = "**********"
 
 BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
 
@@ -28,45 +24,15 @@ policies = requests.get(
     headers=headers, verify=False
 ).json()["content"]
 
-# беремо політику де вже є whitelistrules
-target = None
+print(f"Всього політик: {len(policies)}\n")
+print("Політики що мають whitelist або blacklist:")
+print("="*80)
+
 for p in policies:
     d = requests.get(f"{BASE_URL}/policies/exceptions/{p['id']}", headers=headers, verify=False)
     if d.status_code == 200:
         cfg = d.json().get("configuration", {})
-        if cfg.get("whitelistrules"):
-            target = (p["id"], p["name"], d.json())
-            break
-
-pid, pname, data = target
-print(f"Тестова політика: {pname}")
-print(f"Хешів у whitelist ДО: {len(data['configuration']['whitelistrules'])}\n")
-
-new_rule = {
-    "rulestate": {"enabled": True},
-    "processfile": {
-        "sha2": TEST_HASH,
-        "name": "ZZZ_TEST_DELETE_ME",
-        "company": "",
-        "size": 0,
-        "description": None,
-        "directory": ""
-    },
-    "action": "IGNORE"
-}
-
-dataA = copy.deepcopy(data)
-dataA["configuration"]["whitelistrules"].append(new_rule)
-
-rA = requests.put(f"{BASE_URL}/policies/exceptions/{pid}", json=dataA, headers=headers, verify=False)
-print(f"PUT статус: {rA.status_code}")
-if rA.status_code != 200:
-    print(f"Помилка: {rA.text[:300]}\n")
-
-# перечитуємо
-chk = requests.get(f"{BASE_URL}/policies/exceptions/{pid}", headers=headers, verify=False).json()
-count_after = len(chk.get("configuration", {}).get("whitelistrules", []))
-found = TEST_HASH.lower() in json.dumps(chk).lower()
-
-print(f"Хешів у whitelist ПІСЛЯ: {count_after}")
-print(f"Тестовий хеш знайдено після запису: {'ТАК ✓' if found else 'НІ ✗'}")
+        wl = len(cfg.get("whitelistrules", []))
+        bl = len(cfg.get("blacklistrules", []))
+        if wl > 0 or bl > 0:
+            print(f"{p['name'][:50]:<50} | WL: {wl:>3} | BL: {bl:>3}")

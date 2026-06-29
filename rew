@@ -1,12 +1,16 @@
 import requests
 import urllib3
+import hashlib
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 SEPM_IP = "*********"
 USER    = "***********"
 PASS    = "**********"
-CHECK_HASH = "твой_хеш"
+CHECK_HASH_SHA256 = "твой_SHA256_хеш"
+
+# Если у тебя есть файл - можешь вычислить MD5
+# Если нет - попроси MD5 хеш вместо SHA256
 
 BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
 
@@ -18,17 +22,19 @@ auth_res = requests.post(
 token = auth_res.json()["token"]
 headers = {"Authorization": f"Bearer {token}"}
 
-# Создаем новый fingerprint list
+# Попробуем с MD5 (нужно вычислить или попросить)
+CHECK_HASH_MD5 = "вкажи_MD5_если_є"
+
 res = requests.post(
     f"{BASE_URL}/policy-objects/fingerprints",
     json={
-        "name": "TestList_" + CHECK_HASH[:8],
-        "description": "Test fingerprint list",
-        "data": [CHECK_HASH]
+        "name": "TestList",
+        "description": "Test",
+        "data": [CHECK_HASH_MD5]
     },
     headers=headers,
     verify=False
 )
 
-print(f"Создание fingerprint list: {res.status_code}")
+print(f"Статус: {res.status_code}")
 print(res.text[:300])

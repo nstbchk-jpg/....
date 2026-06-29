@@ -1,8 +1,8 @@
+
 Авторизація ОК
 
-Тестова політика: Q0_XE Exceptions policy
-
-ВАРІАНТ А (configuration.whitelistrules): PUT 400 | хеш після запису: Є ✓
-   помилка: {"errorCode":"400","appErrorCode":"","errorMessage":"Duplicate blacklist or whitelist with ************** were detected!"}
-
->>> ПРАЦЮЄ ВАРІАНТ А. Використовуй configuration.whitelistrules
+Traceback (most recent call last):
+  File "\*****", line 44, in <module>
+    pid, pname, data = target
+    ^^^^^^^^^^^^^^^^
+TypeError: cannot unpack non-iterable NoneType object

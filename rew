@@ -11,23 +11,29 @@ CHECK_HASH = "твой_хеш"
 
 BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
 
+print("1. Авторизация...")
 auth_res = requests.post(
     f"{BASE_URL}/identity/authenticate",
     json={"username": USER, "password": PASS, "domain": ""},
     verify=False
 )
+print(f"   Статус: {auth_res.status_code}")
 token = auth_res.json()["token"]
 headers = {"Authorization": f"Bearer {token}"}
 
+print("2. Получение политик...")
 res = requests.get(
     f"{BASE_URL}/policies/summary",
     params={"pageSize": 100},
     headers=headers,
     verify=False
 )
+print(f"   Статус: {res.status_code}")
 policies = res.json().get("content", [])
+print(f"   Всего: {len(policies)}")
 
-# Берем первую политику с хешами
+print("3. Поиск политики с whitelistrules...")
+count = 0
 for policy in policies:
     policy_id = policy.get("id")
     policy_name = policy.get("name")
@@ -40,42 +46,13 @@ for policy in policies:
     
     if get_res.status_code == 200:
         policy_data = get_res.json()
-        raw = json.dumps(policy_data)
         
-        if "sha2" in raw and "whitelistrules" in policy_data:
-            print(f"Политика: {policy_name}\n")
+        if "whitelistrules" in policy_data:
+            count += 1
+            print(f"   {count}. {policy_name}")
             
-            # Тест 1: POST в /whitelistrules/{policyId}
-            rule = {
-                "rulestate": {"enabled": True},
-                "processfile": {
-                    "sha2": CHECK_HASH,
-                    "name": "test1",
-                    "company": "",
-                    "size": 0,
-                    "description": None,
-                    "directory": ""
-                },
-                "action": "IGNORE"
-            }
-            
-            res1 = requests.post(
-                f"{BASE_URL}/policies/exceptions/{policy_id}/whitelistrules",
-                json=rule,
-                headers=headers,
-                verify=False
-            )
-            print(f"Тест 1 - POST /whitelistrules: {res1.status_code}")
-            print(f"  Відповідь: {res1.text[:200]}\n")
-            
-            # Тест 2: POST в /whitelistrules (без ID)
-            res2 = requests.post(
-                f"{BASE_URL}/policies/exceptions/whitelistrules",
-                json={**rule, "policyId": policy_id},
-                headers=headers,
-                verify=False
-            )
-            print(f"Тест 2 - POST /whitelistrules (global): {res2.status_code}")
-            print(f"  Відповідь: {res2.text[:200]}\n")
-            
-            break
+            if count >= 3:
+                break
+
+if count == 0:
+    print("   Не найдено политик с whitelistrules!")

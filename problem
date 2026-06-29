@@ -1,5 +1,8 @@
-Вариант 1 - POST /fingerprints: 404
-  <!doctype html><html lang="en"><head><title>HTTP Status 404 – Not Found</title><style type="text/css">body {font-family:Tahoma,Arial,sans-serif;} h1, h2, h3, b {color:white;background-color:#525D76;}
-
-Вариант 2 - POST /fingerprints (global): 500
-  {"errorCode":"500","appErrorCode":"","errorMessage":"Internal Server Error"}
+Тест 1: 500 | {'sha2': '********', 'action': 'IGNORE'}
+Тест 2: 500 | {'hash': '********************', 'action': 'IGNORE'}
+Тест 3: 500 | {'fingerprint': '********************', 'action': 'IGNORE'}
+Тест 4: 500 | {'sha256': '********************', 'action': 'IGNORE'}
+Тест 5: 500 | {'policyId': '********', 'sha2': '********************', 'action': 'IGNORE'}
+Тест 6: 500 | {'policy_id': '********', 'sha2': '********************', 'action': 'IGNORE'}
+Тест 7: 500 | {'sha2': '********************'}
+Тест 8: 500 | {'sha2': '********************', 'name': 'unknown'}

@@ -7,11 +7,9 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 SEPM_IP = "*********"
 USER    = "***********"
 PASS    = "**********"
-CHECK_HASH = "твой_хеш"
 
 BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
 
-print("1. Авторизация...")
 auth_res = requests.post(
     f"{BASE_URL}/identity/authenticate",
     json={"username": USER, "password": PASS, "domain": ""},
@@ -20,7 +18,6 @@ auth_res = requests.post(
 token = auth_res.json()["token"]
 headers = {"Authorization": f"Bearer {token}"}
 
-print("2. Получение политик...")
 res = requests.get(
     f"{BASE_URL}/policies/summary",
     params={"pageSize": 100},
@@ -29,8 +26,7 @@ res = requests.get(
 )
 policies = res.json().get("content", [])
 
-print("3. Поиск политики с хешами в configuration...")
-count = 0
+# Находим первую политику с blacklistrules
 for policy in policies:
     policy_id = policy.get("id")
     policy_name = policy.get("name")
@@ -44,17 +40,13 @@ for policy in policies:
     if get_res.status_code == 200:
         policy_data = get_res.json()
         config = policy_data.get("configuration", {})
-        
-        # Ищем в configuration
-        whitelist = config.get("whitelistrules", [])
         blacklist = config.get("blacklistrules", [])
         
-        if whitelist or blacklist:
-            count += 1
-            print(f"   {count}. {policy_name}")
-            print(f"      whitelistrules: {len(whitelist)}, blacklistrules: {len(blacklist)}")
-            
-            if count >= 3:
-                break
-
-print(f"\nВсего найдено: {count}")
+        if blacklist:
+            print(f"Политика: {policy_name}\n")
+            print("Первые 2 правила в blacklistrules:")
+            for rule in blacklist[:2]:
+                print(f"  action: {rule.get('action')}")
+                print(f"  name: {rule.get('processfile', {}).get('name')}")
+                print()
+            break

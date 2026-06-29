@@ -1,0 +1,51 @@
+import requests
+import urllib3
+import json
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+SEPM_IP = "*********"
+USER    = "***********"
+PASS    = "**********"
+CHECK_HASH = "твой_хеш"
+POLICY_NAME = "имя_политики_в_которую_добавил"
+
+BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
+
+auth_res = requests.post(
+    f"{BASE_URL}/identity/authenticate",
+    json={"username": USER, "password": PASS, "domain": ""},
+    verify=False
+)
+token = auth_res.json()["token"]
+headers = {"Authorization": f"Bearer {token}"}
+
+res = requests.get(
+    f"{BASE_URL}/policies/summary",
+    params={"pageSize": 100},
+    headers=headers,
+    verify=False
+)
+policies = res.json().get("content", [])
+
+# Ищем политику
+for policy in policies:
+    if policy.get("name") == POLICY_NAME:
+        policy_id = policy.get("id")
+        
+        detail_res = requests.get(
+            f"{BASE_URL}/policies/exceptions/{policy_id}",
+            headers=headers,
+            verify=False
+        )
+        
+        if detail_res.status_code == 200:
+            policy_data = detail_res.json()
+            print(f"Политика: {POLICY_NAME}")
+            print(f"\nwhitelistrules:")
+            for rule in policy_data.get("whitelistrules", []):
+                print(f"  {rule.get('processfile', {}).get('sha2')}")
+            print(f"\nblacklistrules:")
+            for rule in policy_data.get("blacklistrules", []):
+                print(f"  {rule.get('processfile', {}).get('sha2')}")
+        break

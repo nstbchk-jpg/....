@@ -8,7 +8,7 @@ SEPM_IP = "*********"
 USER    = "***********"
 PASS    = "**********"
 CHECK_HASH = "твой_хеш"
-ADD_TO_WHITELIST = True  # True = IGNORE (дозволити), False = QUARANTINE (блокувати)
+ADD_TO_WHITELIST = True
 
 BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
 
@@ -31,7 +31,6 @@ res = requests.get(
 policies = res.json().get("content", [])
 
 added = 0
-existing = 0
 
 for policy in policies:
     policy_id = policy.get("id")
@@ -47,57 +46,79 @@ for policy in policies:
         policy_data = get_res.json()
         config = policy_data.get("configuration", {})
         
-        # Правильный выбор массива
-        if ADD_TO_WHITELIST:
-            rule_list = config.get("whitelistrules", [])
-            action = "IGNORE"
-        else:
-            rule_list = config.get("blacklistrules", [])
-            action = "QUARANTINE"
+        whitelist = config.get("whitelistrules", [])
+        blacklist = config.get("blacklistrules", [])
+        
+        if not whitelist and not blacklist:
+            continue
         
         # Проверяем есть ли уже хеш
         found = False
-        for rule in rule_list:
+        for rule in whitelist + blacklist:
             if rule.get("processfile", {}).get("sha2") == CHECK_HASH:
                 found = True
-                existing += 1
                 break
         
-        if not found and rule_list:  # Добавляем только если есть уже такой список
-            new_rule = {
-                "rulestate": {"enabled": True},
-                "processfile": {
-                    "sha2": CHECK_HASH,
-                    "name": "unknown",
-                    "company": "",
-                    "size": 0,
-                    "description": None,
-                    "directory": ""
-                },
-                "action": action
-            }
-            
-            rule_list.append(new_rule)
-            
-            if ADD_TO_WHITELIST:
-                config["whitelistrules"] = rule_list
-            else:
-                config["blacklistrules"] = rule_list
-            
-            policy_data["configuration"] = config
-            
-            put_res = requests.put(
-                f"{BASE_URL}/policies/exceptions/{policy_id}",
-                json=policy_data,
-                headers=headers,
-                verify=False
-            )
-            
-            if put_res.status_code in (200, 201):
-                added += 1
-                print(f"  ✓ {policy_name}")
-            else:
-                print(f"  ✗ {policy_name}")
+        if found:
+            continue
+        
+        # Вариант 1: Полная структура как в файле
+        new_rule_v1 = {
+            "rulestate": {"enabled": True},
+            "processfile": {
+                "sha2": CHECK_HASH,
+                "name": "unknown",
+                "company": "",
+                "size": 0,
+                "description": None,
+                "directory": ""
+            },
+            "action": "IGNORE"
+        }
+        
+        # Вариант 2: С дополнительными полями
+        new_rule_v2 = {
+            "rulestate": {"enabled": True},
+            "processfile": {
+                "sha2": CHECK_HASH,
+                "name": "unknown",
+                "company": "",
+                "size": 0,
+                "description": None,
+                "directory": ""
+            },
+            "action": "IGNORE",
+            "exception_item": CHECK_HASH,
+            "exception_type": "application"
+        }
+        
+        # Вариант 3: Минимальный
+        new_rule_v3 = {
+            "exception_item": CHECK_HASH,
+            "action": "IGNORE",
+            "exception_type": "application",
+            "enabled": True
+        }
+        
+        # Тестируем вариант 1
+        if whitelist or not blacklist:
+            config["whitelistrules"] = whitelist + [new_rule_v1]
+        else:
+            config["blacklistrules"] = blacklist + [new_rule_v1]
+        
+        policy_data["configuration"] = config
+        
+        put_res = requests.put(
+            f"{BASE_URL}/policies/exceptions/{policy_id}",
+            json=policy_data,
+            headers=headers,
+            verify=False
+        )
+        
+        if put_res.status_code in (200, 201):
+            added += 1
+            print(f"  ✓ {policy_name} (V1)")
+        else:
+            print(f"  ✗ {policy_name}: {put_res.status_code}")
 
-print(f"\nДобавлено: {added}")
-print(f"Уже было: {existing}")
+print(f"\nДобавлено (Вариант 1): {added}")

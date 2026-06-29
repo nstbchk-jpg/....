@@ -1,16 +1,16 @@
 import requests
 import urllib3
-import hashlib
+import json
+import logging
 
+# Включаємо логирование всех запросів
+logging.basicConfig(level=logging.DEBUG)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 SEPM_IP = "*********"
 USER    = "***********"
 PASS    = "**********"
-CHECK_HASH_SHA256 = "твой_SHA256_хеш"
-
-# Если у тебя есть файл - можешь вычислить MD5
-# Если нет - попроси MD5 хеш вместо SHA256
+CHECK_HASH = "твой_хеш"
 
 BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
 
@@ -22,19 +22,56 @@ auth_res = requests.post(
 token = auth_res.json()["token"]
 headers = {"Authorization": f"Bearer {token}"}
 
-# Попробуем с MD5 (нужно вычислить или попросить)
-CHECK_HASH_MD5 = "вкажи_MD5_если_є"
+# Отримуємо політику
+res = requests.get(
+    f"{BASE_URL}/policies/summary",
+    params={"pageSize": 100},
+    headers=headers,
+    verify=False
+)
+policies = res.json().get("content", [])
+policy_id = policies[0].get("id")
 
-res = requests.post(
-    f"{BASE_URL}/policy-objects/fingerprints",
-    json={
-        "name": "TestList",
-        "description": "Test",
-        "data": [CHECK_HASH_MD5]
-    },
+# Отримуємо деталі
+get_res = requests.get(
+    f"{BASE_URL}/policies/exceptions/{policy_id}",
     headers=headers,
     verify=False
 )
 
-print(f"Статус: {res.status_code}")
-print(res.text[:300])
+policy_data = get_res.json()
+config = policy_data.get("configuration", {})
+whitelist = config.get("whitelistrules", [])
+
+# Додаємо
+new_rule = {
+    "rulestate": {"enabled": True},
+    "processfile": {
+        "sha2": CHECK_HASH,
+        "name": "test",
+        "company": "",
+        "size": 0,
+        "description": None,
+        "directory": ""
+    },
+    "action": "IGNORE"
+}
+whitelist.append(new_rule)
+config["whitelistrules"] = whitelist
+policy_data["configuration"] = config
+
+print("="*100)
+print("ВІДПРАВЛЯЄМО PUT запит:")
+print(f"URL: {BASE_URL}/policies/exceptions/{policy_id}")
+print(f"ТІЛО: {json.dumps(policy_data, indent=2)[:1000]}")
+print("="*100)
+
+put_res = requests.put(
+    f"{BASE_URL}/policies/exceptions/{policy_id}",
+    json=policy_data,
+    headers=headers,
+    verify=False
+)
+
+print(f"\nВідповідь: {put_res.status_code}")
+print(f"Тіло: {put_res.text}")

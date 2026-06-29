@@ -7,7 +7,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 SEPM_IP = "*********"
 USER    = "***********"
 PASS    = "**********"
-CHECK_HASH = "сюди_встав_хеш"
 
 BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
 
@@ -18,7 +17,6 @@ auth_res = requests.post(
 )
 token = auth_res.json()["token"]
 headers = {"Authorization": f"Bearer {token}"}
-print("Авторизація успішна\n")
 
 res = requests.get(
     f"{BASE_URL}/policies/summary",
@@ -26,27 +24,27 @@ res = requests.get(
     headers=headers,
     verify=False
 )
-
 policies = res.json().get("content", [])
-print(f"Всього політик: {len(policies)}\n")
 
-# Перебираємо всі політики незалежно від типу
+count = 0
 for policy in policies:
     policy_id = policy.get("id")
     policy_name = policy.get("name")
-
+    
     detail_res = requests.get(
         f"{BASE_URL}/policies/exceptions/{policy_id}",
         headers=headers,
         verify=False
     )
-
+    
     if detail_res.status_code == 200:
-        raw = json.dumps(detail_res.json())
-        if CHECK_HASH.lower() in raw.lower():
-            print(f"\033[32m[V] Хеш знайдено в політиці: {policy_name}\033[0m")
-            print(json.dumps(detail_res.json(), indent=2)[:500])
-        else:
-            print(f"\033[90m[-] Не знайдено в: {policy_name}\033[0m")
-    else:
-        print(f"\033[90m[-] {policy_name} | статус: {detail_res.status_code}\033[0m")
+        policy_data = detail_res.json()
+        
+        # Шукаємо де є хеші (sha2)
+        raw = json.dumps(policy_data)
+        if "sha2" in raw:
+            count += 1
+            print(f"{count}. {policy_name}")
+            
+            if count >= 3:
+                break

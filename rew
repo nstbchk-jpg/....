@@ -42,6 +42,5 @@ for policy in policies:
         
         if config.get("blacklistrules"):
             print(f"Политика: {policy_name}\n")
-            print("Все ключи в configuration:")
-            print(list(config.keys()))
+            print(json.dumps(config, indent=2))
             break

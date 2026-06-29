@@ -1,4 +1,8 @@
-ine 67, in <module>
-    dataA = copy.deepcopy(data)
-            ^^^^
-NameError: name 'copy' is not defined. Did you forget to import 'copy'?
+Авторизація ОК
+
+Тестова політика: Q0_XE Exceptions policy
+
+ВАРІАНТ А (configuration.whitelistrules): PUT 400 | хеш після запису: Є ✓
+   помилка: {"errorCode":"400","appErrorCode":"","errorMessage":"Duplicate blacklist or whitelist with ************** were detected!"}
+
+>>> ПРАЦЮЄ ВАРІАНТ А. Використовуй configuration.whitelistrules

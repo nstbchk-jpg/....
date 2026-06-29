@@ -1,6 +1,5 @@
 import requests
 import urllib3
-import json
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -19,34 +18,17 @@ auth_res = requests.post(
 token = auth_res.json()["token"]
 headers = {"Authorization": f"Bearer {token}"}
 
-res = requests.get(
-    f"{BASE_URL}/policies/summary",
-    params={"pageSize": 100},
+# Создаем новый fingerprint list
+res = requests.post(
+    f"{BASE_URL}/policy-objects/fingerprints",
+    json={
+        "name": "TestList_" + CHECK_HASH[:8],
+        "description": "Test fingerprint list",
+        "data": [CHECK_HASH]
+    },
     headers=headers,
     verify=False
 )
-policies = res.json().get("content", [])
-policy_id = policies[0].get("id")
 
-# Пробуем разные структуры
-tests = [
-    {"sha2": CHECK_HASH, "action": "IGNORE"},
-    {"hash": CHECK_HASH, "action": "IGNORE"},
-    {"fingerprint": CHECK_HASH, "action": "IGNORE"},
-    {"sha256": CHECK_HASH, "action": "IGNORE"},
-    {"policyId": policy_id, "sha2": CHECK_HASH, "action": "IGNORE"},
-    {"policy_id": policy_id, "sha2": CHECK_HASH, "action": "IGNORE"},
-    {"sha2": CHECK_HASH},
-    {"sha2": CHECK_HASH, "name": "unknown"},
-]
-
-for i, body in enumerate(tests, 1):
-    res = requests.post(
-        f"{BASE_URL}/policies/exceptions/fingerprints",
-        json=body,
-        headers=headers,
-        verify=False
-    )
-    print(f"Тест {i}: {res.status_code} | {body}")
-    if res.status_code not in (500, 400):
-        print(f"  УСПЕХ! {res.text[:200]}")
+print(f"Создание fingerprint list: {res.status_code}")
+print(res.text[:300])

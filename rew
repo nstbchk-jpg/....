@@ -8,11 +8,12 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 SEPM_IP    = "*********"
 USER       = "***********"
 PASS       = "**********"
-CHECK_HASH = "твій_хеш"
+
+# ВИГАДАНИЙ унікальний хеш якого точно ніде немає
+TEST_HASH = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA99"
 
 BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
 
-# ---------- авторизація ----------
 token = requests.post(
     f"{BASE_URL}/identity/authenticate",
     json={"username": USER, "password": PASS, "domain": ""},
@@ -21,32 +22,31 @@ token = requests.post(
 headers = {"Authorization": f"Bearer {token}"}
 print("Авторизація ОК\n")
 
-# ---------- знаходимо політику де ВЖЕ є хеші ----------
 policies = requests.get(
     f"{BASE_URL}/policies/summary",
     params={"pageSize": 100},
     headers=headers, verify=False
 ).json()["content"]
 
+# беремо політику де вже є whitelistrules
 target = None
 for p in policies:
     d = requests.get(f"{BASE_URL}/policies/exceptions/{p['id']}", headers=headers, verify=False)
-    if d.status_code == 200 and "sha2" in json.dumps(d.json()):
-        target = (p["id"], p["name"], d.json())
-        break
-
-if not target:
-    print("Не знайдено політики з хешами для тесту")
-    exit(1)
+    if d.status_code == 200:
+        cfg = d.json().get("configuration", {})
+        if cfg.get("whitelistrules"):
+            target = (p["id"], p["name"], d.json())
+            break
 
 pid, pname, data = target
-print(f"Тестова політика: {pname}\n")
+print(f"Тестова політика: {pname}")
+print(f"Хешів у whitelist ДО: {len(data['configuration']['whitelistrules'])}\n")
 
 new_rule = {
     "rulestate": {"enabled": True},
     "processfile": {
-        "sha2": CHECK_HASH,
-        "name": "test",
+        "sha2": TEST_HASH,
+        "name": "ZZZ_TEST_DELETE_ME",
         "company": "",
         "size": 0,
         "description": None,
@@ -55,58 +55,18 @@ new_rule = {
     "action": "IGNORE"
 }
 
-def hash_present(policy_json):
-    return CHECK_HASH.lower() in json.dumps(policy_json).lower()
-
-# ============================================================
-# ВАРІАНТ А: configuration.whitelistrules
-# ============================================================
 dataA = copy.deepcopy(data)
-dataA.setdefault("configuration", {}).setdefault("whitelistrules", []).append(new_rule)
+dataA["configuration"]["whitelistrules"].append(new_rule)
+
 rA = requests.put(f"{BASE_URL}/policies/exceptions/{pid}", json=dataA, headers=headers, verify=False)
-chkA = requests.get(f"{BASE_URL}/policies/exceptions/{pid}", headers=headers, verify=False).json()
-inA = hash_present(chkA)
-print(f"ВАРІАНТ А (configuration.whitelistrules): PUT {rA.status_code} | хеш після запису: {'Є ✓' if inA else 'НЕМАЄ ✗'}")
+print(f"PUT статус: {rA.status_code}")
 if rA.status_code != 200:
-    print(f"   помилка: {rA.text[:200]}")
+    print(f"Помилка: {rA.text[:300]}\n")
 
-# якщо А спрацював — далі не тестуємо
-if inA:
-    print("\n>>> ПРАЦЮЄ ВАРІАНТ А. Використовуй configuration.whitelistrules")
-    exit(0)
+# перечитуємо
+chk = requests.get(f"{BASE_URL}/policies/exceptions/{pid}", headers=headers, verify=False).json()
+count_after = len(chk.get("configuration", {}).get("whitelistrules", []))
+found = TEST_HASH.lower() in json.dumps(chk).lower()
 
-# ============================================================
-# ВАРІАНТ Б: whitelistrules на верхньому рівні
-# ============================================================
-dataB = copy.deepcopy(data)
-dataB.setdefault("whitelistrules", []).append(new_rule)
-rB = requests.put(f"{BASE_URL}/policies/exceptions/{pid}", json=dataB, headers=headers, verify=False)
-chkB = requests.get(f"{BASE_URL}/policies/exceptions/{pid}", headers=headers, verify=False).json()
-inB = hash_present(chkB)
-print(f"ВАРІАНТ Б (root whitelistrules):           PUT {rB.status_code} | хеш після запису: {'Є ✓' if inB else 'НЕМАЄ ✗'}")
-if rB.status_code != 200:
-    print(f"   помилка: {rB.text[:200]}")
-
-if inB:
-    print("\n>>> ПРАЦЮЄ ВАРІАНТ Б. Використовуй root whitelistrules")
-    exit(0)
-
-# ============================================================
-# ВАРІАНТ В: PATCH замість PUT
-# ============================================================
-dataC = copy.deepcopy(data)
-dataC.setdefault("configuration", {}).setdefault("whitelistrules", []).append(new_rule)
-rC = requests.patch(f"{BASE_URL}/policies/exceptions/{pid}", json=dataC, headers=headers, verify=False)
-chkC = requests.get(f"{BASE_URL}/policies/exceptions/{pid}", headers=headers, verify=False).json()
-inC = hash_present(chkC)
-print(f"ВАРІАНТ В (PATCH configuration):           PATCH {rC.status_code} | хеш після запису: {'Є ✓' if inC else 'НЕМАЄ ✗'}")
-if rC.status_code not in (200, 204):
-    print(f"   помилка: {rC.text[:200]}")
-
-if inC:
-    print("\n>>> ПРАЦЮЄ ВАРІАНТ В (PATCH).")
-    exit(0)
-
-print("\n>>> Жоден варіант не записав хеш. Тоді PUT/PATCH на цю політику взагалі не редагує правила —")
-print(">>> потрібен окремий endpoint (той що дергає кнопка 'Add an application by fingerprint').")
-print(">>> Відкрий F12 → Network у вебці, натисни кнопку і скинь URL+тіло запиту.")
+print(f"Хешів у whitelist ПІСЛЯ: {count_after}")
+print(f"Тестовий хеш знайдено після запису: {'ТАК ✓' if found else 'НІ ✗'}")

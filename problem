@@ -1,9 +1,155 @@
- line 27, in <module>
-    policies = requests.get(
-               ~~~~~~~~~~~~~
-    ...<2 lines>...
-        headers=headers, verify=False
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    ).json()["content"]
-    ~~~~~~~~^^^^^^^^^^^
-KeyError: 'content'
+import requests
+import urllib3
+import json
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# ============================================================
+# Налаштування
+# ============================================================
+SEPM_IP   = "******"  
+USER      = "******"
+PASS      = "******@ERT977"
+CHECK_HASH = "******"
+ADD_TO_WHITELIST = True
+
+BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
+
+print(f"\033[90m[-] Авторизація...\033[0m")
+auth_res = requests.post(
+    f"{BASE_URL}/identity/authenticate",
+    json={"username": USER, "password": PASS, "domain": ""},
+    verify=False
+)
+token = auth_res.json()["token"]
+headers = {"Authorization": f"Bearer {token}"}
+print("\033[32m[V] Авторизація успішна.\033[0m\n")
+
+print(f"\033[90m[-] Отримання список політик...\033[0m")
+res = requests.get(
+    f"{BASE_URL}/policies/summary",
+    params={"pageSize": 100},
+    headers=headers,
+    verify=False
+)
+
+policies = res.json().get("content", [])
+print(f"\033[32m[V] Знайдено політик: {len(policies)}\033[0m\n")
+
+added_policies = []
+existing_policies = []
+error_policies = []
+
+for policy in policies:
+    policy_id = policy.get("id")
+    policy_name = policy.get("name")
+
+    detail_res = requests.get(
+        f"{BASE_URL}/policies/exceptions/{policy_id}",
+        headers=headers,
+        verify=False
+    )
+
+    if detail_res.status_code == 200:
+        policy_data = detail_res.json()
+        raw = json.dumps(policy_data)
+        
+        if CHECK_HASH.lower() in raw.lower():
+            existing_policies.append(policy_name)
+        else:
+            if ADD_TO_WHITELIST:
+                if "whitelistrules" not in policy_data:
+                    policy_data["whitelistrules"] = []
+                rule_list = policy_data["whitelistrules"]
+            else:
+                if "blacklistrules" not in policy_data:
+                    policy_data["blacklistrules"] = []
+                rule_list = policy_data["blacklistrules"]
+            
+            action = "IGNORE" if ADD_TO_WHITELIST else "QUARANTINE"
+            
+            new_rule = {
+                "rulestate": {"enabled": True},
+                "processfile": {
+                    "sha2": CHECK_HASH,
+                    "name": "unknown",
+                    "company": "",
+                    "size": 0,
+                    "description": None,
+                    "directory": ""
+                },
+                "action": action
+            }
+            
+            rule_list.append(new_rule)
+            
+            update_res = requests.put(
+                f"{BASE_URL}/policies/exceptions/{policy_id}",
+                json=policy_data,
+                headers=headers,
+                verify=False
+            )
+            
+            if update_res.status_code in (200, 201):
+                added_policies.append(policy_name)
+                print(f"    \033[32m[+] {policy_name}\033[0m")
+            else:
+                try:
+                    error_msg = update_res.json().get("errorMessage", "Невідома помилка")
+                except:
+                    error_msg = update_res.text[:100]
+                error_policies.append((policy_name, error_msg))
+                print(f"    \033[31m[!] {policy_name}: {error_msg[:80]}\033[0m")
+
+print(f"\n{'='*100}")
+print(f"\n\033[32m[+] ДОДАНО ({len(added_policies)}):\033[0m")
+for p in added_policies:
+    print(f"      • {p}")
+
+print(f"\n\033[33m[i] УЖЕ ІСНУЄ ({len(existing_policies)}):\033[0m")
+for p in existing_policies:
+    print(f"      • {p}")
+
+if error_policies:
+    print(f"\n\033[31m[!] ПОМИЛКИ ({len(error_policies)}):\033[0m")
+    for p, err in error_policies:
+        print(f"      • {p}: {err[:80]}")
+		
+		
+		
+		і помилка 
+		←[90m[-] Авторизація...←[0m
+←[32m[V] Авторизація успішна.←[0m
+
+←[90m[-] Отримання список політик...←[0m
+←[32m[V] Знайдено політик: 286←[0m
+
+    ←[31m[!] Exceptions policy ***: 'desc' Description length is max 1024.←[0m
+    ←[31m[!] O***S: Duplicate blacklist or whitelist with *****←[0m
+    ←[31m[!] Min exeptions for **** policy: 'desc' Description length is max 1024.←[0m
+    ←[32m[+] *** Exceptions policy←[0m
+    ←[32m[+] Exceptions policy 32vcs←[0m
+    ←[32m[+] ***←[0m
+    ←[32m[+] *** Exceptions policy←[0m
+    ←[32m[+] *** Exception Policy←[0m
+    ←[32m[+] ***←[0m
+    ←[32m[+] ********* Exceptions policy Server←[0m
+    ←[32m[+] ********* Exception Policy←[0m
+    ←[32m[+] ********* Exceptions policy←[0m
+    ←[32m[+] *********←[0m
+    ←[32m[+] ********* Exceptions policy←[0m
+    ←[31m[!] Exceptions policy - ********* *********: Невідома помилка←[0m
+
+====================================================================================================
+
+←[32m[+] ДОДАНО (11):←[0m
+      • *********
+
+←[33m[i] УЖЕ ІСНУЄ (19):←[0m
+      • ***********
+	  *****
+←[31m[!] ПОМИЛКИ (4):←[0m
+      • Exceptions policy *****: 'desc' Description length is max 1024.
+      • ***** *****: Duplicate blacklist or whitelist with *****
+      • ***** exeptions for ***** policy: 'desc' Description length is max 1024.
+      • Exceptions policy - ***** *****: Невідома помилка

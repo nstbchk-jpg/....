@@ -26,7 +26,6 @@ res = requests.get(
 )
 policies = res.json().get("content", [])
 
-# Находим первую политику с blacklistrules
 for policy in policies:
     policy_id = policy.get("id")
     policy_name = policy.get("name")
@@ -40,13 +39,9 @@ for policy in policies:
     if get_res.status_code == 200:
         policy_data = get_res.json()
         config = policy_data.get("configuration", {})
-        blacklist = config.get("blacklistrules", [])
         
-        if blacklist:
+        if config.get("blacklistrules"):
             print(f"Политика: {policy_name}\n")
-            print("Первые 2 правила в blacklistrules:")
-            for rule in blacklist[:2]:
-                print(f"  action: {rule.get('action')}")
-                print(f"  name: {rule.get('processfile', {}).get('name')}")
-                print()
+            print("Все ключи в configuration:")
+            print(list(config.keys()))
             break

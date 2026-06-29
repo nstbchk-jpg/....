@@ -9,94 +9,23 @@ SEPM_IP    = "*********"
 USER       = "***********"
 PASS       = "**********"
 CHECK_HASH = "твій_хеш"
-USE_IGNORE = True   # True = копіюємо IGNORE-правило, False = QUARANTINE
+USE_IGNORE = True
 
 BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
 
-token = requests.post(
+auth = requests.post(
     f"{BASE_URL}/identity/authenticate",
     json={"username": USER, "password": PASS, "domain": ""},
     verify=False
-).json()["token"]
+)
+print(f"Авторизація статус: {auth.status_code}")
+token = auth.json()["token"]
 headers = {"Authorization": f"Bearer {token}"}
-print("Авторизація ОК\n")
 
-target_action = "IGNORE" if USE_IGNORE else "QUARANTINE"
-
-policies = requests.get(
+res = requests.get(
     f"{BASE_URL}/policies/summary",
     params={"pageSize": 100},
     headers=headers, verify=False
-).json()["content"]
-
-added = 0
-existing = 0
-errors = 0
-
-for p in policies:
-    pid, pname = p["id"], p["name"]
-    d = requests.get(f"{BASE_URL}/policies/exceptions/{pid}", headers=headers, verify=False)
-    if d.status_code != 200:
-        continue
-
-    policy_data = d.json()
-    cfg = policy_data.get("configuration", {})
-
-    # шукаємо в обох масивах наявне правило з потрібним action і з sha2 (шаблон)
-    template = None
-    template_list = None
-    for key in ("whitelistrules", "blacklistrules"):
-        for rule in cfg.get(key, []):
-            if rule.get("action") == target_action and rule.get("processfile", {}).get("sha2"):
-                template = rule
-                template_list = key
-                break
-        if template:
-            break
-
-    # немає шаблону потрібного типу в цій політиці — пропускаємо
-    if not template:
-        continue
-
-    # перевіряємо чи наш хеш вже є будь-де в політиці
-    if CHECK_HASH.lower() in json.dumps(policy_data).lower():
-        existing += 1
-        continue
-
-    # дублюємо шаблон і підставляємо свій хеш
-    new_rule = copy.deepcopy(template)
-    new_rule["processfile"]["sha2"] = CHECK_HASH
-    new_rule["processfile"]["name"] = "added_by_script"
-    new_rule["processfile"]["directory"] = ""
-    new_rule["processfile"]["size"] = 0
-    new_rule["processfile"]["company"] = ""
-    new_rule["processfile"]["description"] = None
-
-    cfg[template_list].append(new_rule)
-    policy_data["configuration"] = cfg
-
-    put_res = requests.put(
-        f"{BASE_URL}/policies/exceptions/{pid}",
-        json=policy_data, headers=headers, verify=False
-    )
-
-    if put_res.status_code == 200:
-        # перечитуємо для підтвердження
-        chk = requests.get(f"{BASE_URL}/policies/exceptions/{pid}", headers=headers, verify=False).json()
-        if CHECK_HASH.lower() in json.dumps(chk).lower():
-            added += 1
-            print(f"  ✓ {pname}")
-        else:
-            errors += 1
-            print(f"  ✗ {pname}: PUT 200 але хеш не зберігся")
-    else:
-        errors += 1
-        try:
-            msg = put_res.json().get("errorMessage", put_res.text[:80])
-        except:
-            msg = put_res.text[:80]
-        print(f"  ✗ {pname}: {put_res.status_code} {msg}")
-
-print(f"\nДодано: {added}")
-print(f"Вже було: {existing}")
-print(f"Помилок: {errors}")
+)
+print(f"policies/summary статус: {res.status_code}")
+print(f"Відповідь: {res.text[:500]}")

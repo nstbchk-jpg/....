@@ -8,11 +8,9 @@ SEPM_IP = "*********"
 USER    = "***********"
 PASS    = "**********"
 CHECK_HASH = "твой_хеш"
-ADD_TO_WHITELIST = True
 
 BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
 
-print("Авторизация...")
 auth_res = requests.post(
     f"{BASE_URL}/identity/authenticate",
     json={"username": USER, "password": PASS, "domain": ""},
@@ -21,7 +19,6 @@ auth_res = requests.post(
 token = auth_res.json()["token"]
 headers = {"Authorization": f"Bearer {token}"}
 
-print("Получение политик...")
 res = requests.get(
     f"{BASE_URL}/policies/summary",
     params={"pageSize": 100},
@@ -30,8 +27,7 @@ res = requests.get(
 )
 policies = res.json().get("content", [])
 
-added = 0
-
+# Берем первую политику с whitelistrules
 for policy in policies:
     policy_id = policy.get("id")
     policy_name = policy.get("name")
@@ -46,79 +42,29 @@ for policy in policies:
         policy_data = get_res.json()
         config = policy_data.get("configuration", {})
         
-        whitelist = config.get("whitelistrules", [])
-        blacklist = config.get("blacklistrules", [])
-        
-        if not whitelist and not blacklist:
-            continue
-        
-        # Проверяем есть ли уже хеш
-        found = False
-        for rule in whitelist + blacklist:
-            if rule.get("processfile", {}).get("sha2") == CHECK_HASH:
-                found = True
-                break
-        
-        if found:
-            continue
-        
-        # Вариант 1: Полная структура как в файле
-        new_rule_v1 = {
-            "rulestate": {"enabled": True},
-            "processfile": {
-                "sha2": CHECK_HASH,
-                "name": "unknown",
-                "company": "",
-                "size": 0,
-                "description": None,
-                "directory": ""
-            },
-            "action": "IGNORE"
-        }
-        
-        # Вариант 2: С дополнительными полями
-        new_rule_v2 = {
-            "rulestate": {"enabled": True},
-            "processfile": {
-                "sha2": CHECK_HASH,
-                "name": "unknown",
-                "company": "",
-                "size": 0,
-                "description": None,
-                "directory": ""
-            },
-            "action": "IGNORE",
-            "exception_item": CHECK_HASH,
-            "exception_type": "application"
-        }
-        
-        # Вариант 3: Минимальный
-        new_rule_v3 = {
-            "exception_item": CHECK_HASH,
-            "action": "IGNORE",
-            "exception_type": "application",
-            "enabled": True
-        }
-        
-        # Тестируем вариант 1
-        if whitelist or not blacklist:
-            config["whitelistrules"] = whitelist + [new_rule_v1]
-        else:
-            config["blacklistrules"] = blacklist + [new_rule_v1]
-        
-        policy_data["configuration"] = config
-        
-        put_res = requests.put(
-            f"{BASE_URL}/policies/exceptions/{policy_id}",
-            json=policy_data,
-            headers=headers,
-            verify=False
-        )
-        
-        if put_res.status_code in (200, 201):
-            added += 1
-            print(f"  ✓ {policy_name} (V1)")
-        else:
-            print(f"  ✗ {policy_name}: {put_res.status_code}")
-
-print(f"\nДобавлено (Вариант 1): {added}")
+        if config.get("whitelistrules"):
+            # Берем первое правило как шаблон
+            template = config["whitelistrules"][0]
+            print(f"Политика: {policy_name}\n")
+            print("Шаблон первого правила:")
+            print(json.dumps(template, indent=2))
+            
+            # Пытаемся добавить копию
+            new_rule = json.loads(json.dumps(template))  # Глубокая копия
+            new_rule["processfile"]["sha2"] = CHECK_HASH
+            
+            config["whitelistrules"].append(new_rule)
+            policy_data["configuration"] = config
+            
+            put_res = requests.put(
+                f"{BASE_URL}/policies/exceptions/{policy_id}",
+                json=policy_data,
+                headers=headers,
+                verify=False
+            )
+            
+            print(f"\nОтправка PUT: {put_res.status_code}")
+            if put_res.status_code != 200:
+                print(f"Ошибка: {put_res.text[:300]}")
+            
+            break

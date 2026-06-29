@@ -27,44 +27,28 @@ res = requests.get(
 )
 policies = res.json().get("content", [])
 
-# Берем первую политику с whitelistrules
-for policy in policies:
-    policy_id = policy.get("id")
-    policy_name = policy.get("name")
-    
-    get_res = requests.get(
-        f"{BASE_URL}/policies/exceptions/{policy_id}",
-        headers=headers,
-        verify=False
-    )
-    
-    if get_res.status_code == 200:
-        policy_data = get_res.json()
-        config = policy_data.get("configuration", {})
-        
-        if config.get("whitelistrules"):
-            # Берем первое правило как шаблон
-            template = config["whitelistrules"][0]
-            print(f"Политика: {policy_name}\n")
-            print("Шаблон первого правила:")
-            print(json.dumps(template, indent=2))
-            
-            # Пытаемся добавить копию
-            new_rule = json.loads(json.dumps(template))  # Глубокая копия
-            new_rule["processfile"]["sha2"] = CHECK_HASH
-            
-            config["whitelistrules"].append(new_rule)
-            policy_data["configuration"] = config
-            
-            put_res = requests.put(
-                f"{BASE_URL}/policies/exceptions/{policy_id}",
-                json=policy_data,
-                headers=headers,
-                verify=False
-            )
-            
-            print(f"\nОтправка PUT: {put_res.status_code}")
-            if put_res.status_code != 200:
-                print(f"Ошибка: {put_res.text[:300]}")
-            
-            break
+# Берем первую политику
+policy_id = policies[0].get("id")
+policy_name = policies[0].get("name")
+
+print(f"Политика: {policy_name}\n")
+
+# Вариант 1
+res1 = requests.post(
+    f"{BASE_URL}/policies/exceptions/{policy_id}/fingerprints",
+    json={"sha2": CHECK_HASH, "action": "IGNORE"},
+    headers=headers,
+    verify=False
+)
+print(f"Вариант 1 - POST /fingerprints: {res1.status_code}")
+print(f"  {res1.text[:200]}\n")
+
+# Вариант 2
+res2 = requests.post(
+    f"{BASE_URL}/policies/exceptions/fingerprints",
+    json={"policyId": policy_id, "sha2": CHECK_HASH, "action": "IGNORE"},
+    headers=headers,
+    verify=False
+)
+print(f"Вариант 2 - POST /fingerprints (global): {res2.status_code}")
+print(f"  {res2.text[:200]}\n")

@@ -7,9 +7,12 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 SEPM_IP = "*********"
 USER    = "***********"
 PASS    = "**********"
+CHECK_HASH = "твой_хеш"
+ADD_TO_WHITELIST = True  # True = IGNORE (дозволити), False = QUARANTINE (блокувати)
 
 BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
 
+print("Авторизация...")
 auth_res = requests.post(
     f"{BASE_URL}/identity/authenticate",
     json={"username": USER, "password": PASS, "domain": ""},
@@ -18,6 +21,7 @@ auth_res = requests.post(
 token = auth_res.json()["token"]
 headers = {"Authorization": f"Bearer {token}"}
 
+print("Получение политик...")
 res = requests.get(
     f"{BASE_URL}/policies/summary",
     params={"pageSize": 100},
@@ -25,6 +29,9 @@ res = requests.get(
     verify=False
 )
 policies = res.json().get("content", [])
+
+added = 0
+existing = 0
 
 for policy in policies:
     policy_id = policy.get("id")
@@ -40,7 +47,57 @@ for policy in policies:
         policy_data = get_res.json()
         config = policy_data.get("configuration", {})
         
-        if config.get("blacklistrules"):
-            print(f"Политика: {policy_name}\n")
-            print(json.dumps(config, indent=2))
-            break
+        # Правильный выбор массива
+        if ADD_TO_WHITELIST:
+            rule_list = config.get("whitelistrules", [])
+            action = "IGNORE"
+        else:
+            rule_list = config.get("blacklistrules", [])
+            action = "QUARANTINE"
+        
+        # Проверяем есть ли уже хеш
+        found = False
+        for rule in rule_list:
+            if rule.get("processfile", {}).get("sha2") == CHECK_HASH:
+                found = True
+                existing += 1
+                break
+        
+        if not found and rule_list:  # Добавляем только если есть уже такой список
+            new_rule = {
+                "rulestate": {"enabled": True},
+                "processfile": {
+                    "sha2": CHECK_HASH,
+                    "name": "unknown",
+                    "company": "",
+                    "size": 0,
+                    "description": None,
+                    "directory": ""
+                },
+                "action": action
+            }
+            
+            rule_list.append(new_rule)
+            
+            if ADD_TO_WHITELIST:
+                config["whitelistrules"] = rule_list
+            else:
+                config["blacklistrules"] = rule_list
+            
+            policy_data["configuration"] = config
+            
+            put_res = requests.put(
+                f"{BASE_URL}/policies/exceptions/{policy_id}",
+                json=policy_data,
+                headers=headers,
+                verify=False
+            )
+            
+            if put_res.status_code in (200, 201):
+                added += 1
+                print(f"  ✓ {policy_name}")
+            else:
+                print(f"  ✗ {policy_name}")
+
+print(f"\nДобавлено: {added}")
+print(f"Уже было: {existing}")

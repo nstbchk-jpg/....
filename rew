@@ -1,31 +1,99 @@
 import requests
 import urllib3
 import json
-import copy
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-SEPM_IP    = "*********"
-USER       = "***********"
-PASS       = "**********"
-CHECK_HASH = "твій_хеш"
-USE_IGNORE = True
+SEPM_IP    = "******"
+USER       = "******"
+PASS       = "******"
+CHECK_HASH = "******"
+ADD_TO_WHITELIST = True
 
 BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
 
-auth = requests.post(
+print("\033[90m[-] Авторизація...\033[0m")
+token = requests.post(
     f"{BASE_URL}/identity/authenticate",
     json={"username": USER, "password": PASS, "domain": ""},
     verify=False
-)
-print(f"Авторизація статус: {auth.status_code}")
-token = auth.json()["token"]
+).json()["token"]
 headers = {"Authorization": f"Bearer {token}"}
+print("\033[32m[V] Авторизація успішна.\033[0m\n")
 
 res = requests.get(
     f"{BASE_URL}/policies/summary",
     params={"pageSize": 100},
     headers=headers, verify=False
 )
-print(f"policies/summary статус: {res.status_code}")
-print(f"Відповідь: {res.text[:500]}")
+policies = res.json().get("content", [])
+print(f"\033[32m[V] Знайдено політик: {len(policies)}\033[0m\n")
+
+action = "IGNORE" if ADD_TO_WHITELIST else "QUARANTINE"
+list_key = "whitelistrules" if ADD_TO_WHITELIST else "blacklistrules"
+
+added, existing, errors = [], [], []
+
+for policy in policies:
+    pid, pname = policy.get("id"), policy.get("name")
+
+    d = requests.get(f"{BASE_URL}/policies/exceptions/{pid}", headers=headers, verify=False)
+    if d.status_code != 200:
+        continue
+
+    policy_data = d.json()
+
+    # хеш вже десь є?
+    if CHECK_HASH.lower() in json.dumps(policy_data).lower():
+        existing.append(pname)
+        continue
+
+    # ПИШЕМО В configuration, не на корінь!
+    config = policy_data.setdefault("configuration", {})
+    rule_list = config.setdefault(list_key, [])
+
+    rule_list.append({
+        "rulestate": {"enabled": True},
+        "processfile": {
+            "sha2": CHECK_HASH,
+            "name": "added_by_script",
+            "company": "",
+            "size": 0,
+            "description": None,
+            "directory": ""
+        },
+        "action": action
+    })
+
+    # обрізаємо desc щоб не ловити помилку 1024
+    if policy_data.get("desc"):
+        policy_data["desc"] = policy_data["desc"][:1024]
+
+    put_res = requests.put(
+        f"{BASE_URL}/policies/exceptions/{pid}",
+        json=policy_data, headers=headers, verify=False
+    )
+
+    if put_res.status_code in (200, 201):
+        # ПІДТВЕРДЖЕННЯ — перечитуємо
+        chk = requests.get(f"{BASE_URL}/policies/exceptions/{pid}", headers=headers, verify=False).json()
+        if CHECK_HASH.lower() in json.dumps(chk).lower():
+            added.append(pname)
+            print(f"    \033[32m[+] {pname}\033[0m")
+        else:
+            errors.append((pname, "PUT 200 але хеш НЕ зберігся"))
+            print(f"    \033[31m[!] {pname}: 200 але не зберігся\033[0m")
+    else:
+        try:
+            msg = put_res.json().get("errorMessage", put_res.text[:80])
+        except:
+            msg = put_res.text[:80]
+        errors.append((pname, msg))
+        print(f"    \033[31m[!] {pname}: {msg[:80]}\033[0m")
+
+print(f"\n{'='*80}")
+print(f"\033[32m[+] ДОДАНО ({len(added)})\033[0m")
+print(f"\033[33m[i] ВЖЕ БУЛО ({len(existing)})\033[0m")
+print(f"\033[31m[!] ПОМИЛКИ ({len(errors)})\033[0m")
+for p, e in errors[:10]:
+    print(f"      • {p}: {e[:70]}")

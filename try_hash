@@ -54,7 +54,6 @@ for policy in policies:
         if CHECK_HASH.lower() in raw.lower():
             existing_policies.append(policy_name)
         else:
-            # Беремо список як є
             if ADD_TO_WHITELIST:
                 if "whitelistrules" not in policy_data:
                     policy_data["whitelistrules"] = []
@@ -81,7 +80,6 @@ for policy in policies:
             
             rule_list.append(new_rule)
             
-            # ВАЖЛИВО: Передаємо政策 ТОЧНО як вона є, БЕЗ видалення desc
             update_res = requests.put(
                 f"{BASE_URL}/policies/exceptions/{policy_id}",
                 json=policy_data,
@@ -98,8 +96,18 @@ for policy in policies:
                 except:
                     error_msg = update_res.text[:100]
                 error_policies.append((policy_name, error_msg))
-                print(f"    \033[31m[!] {policy_name}\033[0m")
+                print(f"    \033[31m[!] {policy_name}: {error_msg[:80]}\033[0m")
 
-print(f"\n\033[32m[+] Додано: {len(added_policies)}\033[0m")
-print(f"\033[33m[i] Існує: {len(existing_policies)}\033[0m")
-print(f"\033[31m[!] Помилок: {len(error_policies)}\033[0m")
+print(f"\n{'='*100}")
+print(f"\n\033[32m[+] ДОДАНО ({len(added_policies)}):\033[0m")
+for p in added_policies:
+    print(f"      • {p}")
+
+print(f"\n\033[33m[i] УЖЕ ІСНУЄ ({len(existing_policies)}):\033[0m")
+for p in existing_policies:
+    print(f"      • {p}")
+
+if error_policies:
+    print(f"\n\033[31m[!] ПОМИЛКИ ({len(error_policies)}):\033[0m")
+    for p, err in error_policies:
+        print(f"      • {p}: {err[:80]}")

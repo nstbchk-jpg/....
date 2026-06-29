@@ -26,7 +26,6 @@ res = requests.get(
 )
 policies = res.json().get("content", [])
 
-count = 0
 for policy in policies:
     policy_id = policy.get("id")
     policy_name = policy.get("name")
@@ -39,12 +38,12 @@ for policy in policies:
     
     if detail_res.status_code == 200:
         policy_data = detail_res.json()
-        
-        # Шукаємо де є хеші (sha2)
         raw = json.dumps(policy_data)
+        
         if "sha2" in raw:
-            count += 1
-            print(f"{count}. {policy_name}")
-            
-            if count >= 3:
-                break
+            print(f"Политика: {policy_name}\n")
+            print("Все ключи:")
+            print(list(policy_data.keys()))
+            print("\n\nПолный JSON (первые 2000 символов):")
+            print(json.dumps(policy_data, indent=2)[:2000])
+            break

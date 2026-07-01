@@ -1,10 +1,70 @@
-Політика: SOC Test Exceptions
-Ключі кореня: ['sources', 'configuration', 'lockedoptions', 'enabled', 'desc', 'name', 'lastmodifiedtime']
-whitelist правил: 0
-Дублікати sha2 у whitelist: нема
-
-Traceback (most recent call last):
-  File "\\tsclient\X\sym\hash\app.py", line 44, in <module>
-    for r in d1["configuration"]["whitelistrules"]:
-             ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
-KeyError: 'whitelistrules'
+{
+  "sources": [],
+  "configuration": {
+    "files": [
+      {
+        "sonar": true,
+		
+ "applications": [
+      {
+        "rulestate": {
+          "enabled": true
+        },
+        "processfile": {
+          "sha2": "**************",
+          "name": "**************.exe",
+          "company": "",
+          "size": 6787138,
+          "description": null,
+          "directory": "**************"
+        },
+        "action": "IGNORE"
+      },
+      {
+        "rulestate": {
+          "enabled": true
+        },
+        "processfile": {
+          "sha2": "**************",
+          "name": "**************.**************",
+          "company": "",
+          "size": 638464,
+          "description": null,
+          "directory": "**************"
+        },
+        "action": "IGNORE"
+      },
+      {
+        "rulestate": {
+          "enabled": true
+        },
+        "processfile": {
+          "sha2": "**************",
+          "name": "**************.exe",
+          "company": "",
+          "size": 7141888,
+          "description": null,
+          "directory": "**************e"
+        },
+        "action": "IGNORE"
+      },
+	  "blacklistrules": [
+      {
+        "rulestate": {
+          "enabled": true
+        },
+        "processfile": {
+          "sha2": "**************",
+          "name": "**************",
+          "company": "************** **************",
+          "size": 315024,
+          "description": null,
+          "directory": "**************"
+        },
+        "action": "QUARANTINE"
+      }
+    ],
+	  "enabled": true,
+  "desc": "Modified  from Created automatically during product installation.",
+  "name": "SOC Test Exceptions",
+  "lastmodifiedtime": ************

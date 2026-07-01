@@ -19,44 +19,47 @@ token = requests.post(
 headers = {"Authorization": f"Bearer {token}"}
 print("Авторизація ОК\n")
 
-# знаходимо політику по імені
 policies = requests.get(
     f"{BASE_URL}/policies/summary",
     params={"pageSize": 100},
     headers=headers, verify=False
 ).json()["content"]
 
-target = None
-for p in policies:
-    if p.get("name", "").strip().lower() == TARGET_POLICY.lower():
-        target = p
-        break
-
-if not target:
-    print(f"Політику '{TARGET_POLICY}' не знайдено. Схожі назви:")
-    for p in policies:
-        if "app" in p.get("name","").lower() or "soc" in p.get("name","").lower():
-            print(f"   • {p.get('name')} | type: {p.get('policytype') or p.get('policyType')}")
-    exit(1)
-
+target = next((p for p in policies if p.get("name","").strip().lower()==TARGET_POLICY.lower()), None)
 pid = target["id"]
-print(f"Знайдено: {target['name']} | ID: {pid}")
-print(f"Тип: {target.get('policytype') or target.get('policyType')}\n")
+print(f"Політика: {target['name']} | type: {target.get('policytype')} | id: {pid}\n")
 
-# пробуємо різні endpoints для application control
-endpoints = [
-    f"{BASE_URL}/policies/adc/{pid}",
-    f"{BASE_URL}/policies/application-control/{pid}",
-    f"{BASE_URL}/policies/appcontrol/{pid}",
-    f"{BASE_URL}/policies/application-device-control/{pid}",
+paths = [
+    f"/policies/adc-policy/{pid}",
+    f"/policies/application-and-device-control/{pid}",
+    f"/policies/applicationcontrol/{pid}",
+    f"/policies/app-control/{pid}",
+    f"/policies/{pid}",
+    f"/policies/adc/{pid}",
+    f"/adc/{pid}",
+    f"/policies/adc-policies/{pid}",
 ]
 
-for url in endpoints:
-    r = requests.get(url, headers=headers, verify=False)
-    print(f"GET {url.split('/api/v1')[1]}: {r.status_code}")
-    if r.status_code == 200:
-        print("   ✓ ПРАЦЮЄ! Ключі:")
-        print("   " + str(list(r.json().keys())))
-        break
-    else:
-        print(f"   {r.text[:120]}")
+working = None
+for path in paths:
+    r = requests.get(f"{BASE_URL}{path}", headers=headers, verify=False)
+    mark = "✓" if r.status_code == 200 else " "
+    print(f"[{mark}] GET {path}: {r.status_code}")
+    if r.status_code == 200 and working is None:
+        working = (path, r.json())
+
+if working:
+    path, data = working
+    print(f"\n{'='*70}")
+    print(f"РОБОЧИЙ ENDPOINT: {path}")
+    print(f"{'='*70}")
+    print("Ключі верхнього рівня:", list(data.keys()) if isinstance(data, dict) else type(data))
+    print(f"\nПовна структура (перші 3000 символів):")
+    print(json.dumps(data, indent=2)[:3000])
+else:
+    print("\nЖоден endpoint не спрацював. Спробуємо через список усіх adc-політик...")
+    for p2 in ["/policies/adc-policies", "/policies/adc", "/policies/applicationcontrol"]:
+        r = requests.get(f"{BASE_URL}{p2}", params={"pageSize":100}, headers=headers, verify=False)
+        print(f"[{'✓' if r.status_code==200 else ' '}] GET {p2}: {r.status_code}")
+        if r.status_code == 200:
+            print("   " + str(r.json())[:300])

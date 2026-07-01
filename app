@@ -1,35 +1,39 @@
-import requests
-import urllib3
-
+import requests, urllib3, json, copy
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-SEPM_IP = "******"
-USER    = "******"
-PASS    = "******"
+SEPM_IP="******"; USER="******"; PASS="******"
+TEST_HASH="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA99"
+BASE_URL=f"https://{SEPM_IP}:8446/sepm/api/v1"
 
-BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
-
-token = requests.post(
-    f"{BASE_URL}/identity/authenticate",
-    json={"username": USER, "password": PASS, "domain": ""},
-    verify=False
-).json()["token"]
-headers = {"Authorization": f"Bearer {token}"}
+token=requests.post(f"{BASE_URL}/identity/authenticate",
+    json={"username":USER,"password":PASS,"domain":""},verify=False).json()["token"]
+headers={"Authorization":f"Bearer {token}"}
 print("Авторизація ОК\n")
 
-# перебираємо можливі кореневі ADC endpoints (без ID) — шукаємо хоч 200/400/500, не 404
-roots = [
-    "/policies/adc",
-    "/policies/adc-policies",
-    "/policies/applicationcontrol",
-    "/policies/application-control",
-    "/policies/appcontrol",
-    "/policies/app-device-control",
-    "/policies/adc-policy",
-]
+policies=requests.get(f"{BASE_URL}/policies/summary",params={"pageSize":100},
+    headers=headers,verify=False).json()["content"]
 
-print("Пошук будь-якого живого ADC-кореня (не-404 = існує):\n")
-for r in roots:
-    resp = requests.get(f"{BASE_URL}{r}", params={"pageSize":10}, headers=headers, verify=False)
-    alive = "◄ ЖИВИЙ" if resp.status_code != 404 else ""
-    print(f"  {resp.status_code:>3}  GET {r}   {alive}")
+target=None
+for p in policies:
+    d=requests.get(f"{BASE_URL}/policies/exceptions/{p['id']}",headers=headers,verify=False)
+    if d.status_code==200:
+        cfg=d.json().get("configuration",{})
+        if cfg.get("whitelistrules") or cfg.get("blacklistrules"):
+            target=(p["id"],p["name"],d.json()); break
+
+pid,pname,data=target
+key="whitelistrules" if data["configuration"].get("whitelistrules") else "blacklistrules"
+act="IGNORE" if key=="whitelistrules" else "QUARANTINE"
+print(f"Політика: {pname} | список: {key}")
+
+new_rule={"rulestate":{"enabled":True},"processfile":{"sha2":TEST_HASH,"name":"PATCH_TEST",
+    "company":"","size":0,"description":None,"directory":""},"action":act}
+
+body=copy.deepcopy(data)
+body["configuration"][key].append(new_rule)
+
+r=requests.patch(f"{BASE_URL}/policies/exceptions/{pid}",json=body,headers=headers,verify=False)
+print(f"PATCH статус: {r.status_code} | {r.text[:150]}")
+
+chk=requests.get(f"{BASE_URL}/policies/exceptions/{pid}",headers=headers,verify=False).json()
+print(f"Хеш після PATCH: {'Є ✓✓✓' if TEST_HASH.lower() in json.dumps(chk).lower() else 'НЕМАЄ ✗'}")

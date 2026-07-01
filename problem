@@ -1,11 +1,6 @@
-Знайдено: SOC Test APP | ID: id
-Тип: adc
-
-GET /policies/adc/id: 404
-   <!doctype html><html lang="en"><head><title>HTTP Status 404 – Not Found</title><style type="text/css">body {font-family:
-GET /policies/application-control/id: 404
-   <!doctype html><html lang="en"><head><title>HTTP Status 404 – Not Found</title><style type="text/css">body {font-family:
-GET /policies/appcontrol/id: 404
-   <!doctype html><html lang="en"><head><title>HTTP Status 404 – Not Found</title><style type="text/css">body {font-family:
-GET /policies/application-device-control/id: 404
-   <!doctype html><html lang="en"><head><title>HTTP Status 404 – Not Found</title><style type="text/css">body {font-family:
+Авторизація ОК
+Політика: Min exeptions for test policy
+desc ДО: ''
+PUT: 400
+desc ПІСЛЯ: ''
+>>> PUT реально пише: НІ — endpoint не редагує взагалі

@@ -1,9 +1,10 @@
-Авторизація ОК
 Політика: SOC Test Exceptions
+Ключі кореня: ['sources', 'configuration', 'lockedoptions', 'enabled', 'desc', 'name', 'lastmodifiedtime']
+whitelist правил: 0
+Дублікати sha2 у whitelist: нема
 
-[PUT] тільки whitelistrules на корені: 400 | хеш: нема | {"errorCode":"400","appErrorCode":"","errorMessage":"'name' Name field is required."}
-[PATCH] тільки whitelistrules на корені: 200 | хеш: нема |
-[PUT] configuration з тільки новим: 400 | хеш: нема | {"errorCode":"400","appErrorCode":"","errorMessage":"'name' Name field is required."}
-[PATCH] configuration з тільки новим: 200 | хеш: нема |
-[PUT] add_whitelist: 400 | хеш: нема | {"errorCode":"400","appErrorCode":"","errorMessage":"'name' Name field is required."}
-[PATCH] add_whitelist: 200 | хеш: нема |
+Traceback (most recent call last):
+  File "\\tsclient\X\sym\hash\app.py", line 44, in <module>
+    for r in d1["configuration"]["whitelistrules"]:
+             ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+KeyError: 'whitelistrules'

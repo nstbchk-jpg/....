@@ -1,6 +1,5 @@
 Авторизація ОК
-Політика: Min exeptions for test policy
-desc ДО: ''
-PUT: 400
-desc ПІСЛЯ: ''
->>> PUT реально пише: НІ — endpoint не редагує взагалі
+Політика: SOC Test Exceptions | тип: exceptions
+
+PUT (об'єкт незмінений): 400
+ПОВНА ВІДПОВІДЬ: {"errorCode":"400","appErrorCode":"","errorMessage":"Duplicate blacklist or whitelist with 573E7838AA7DCD4A75188A68E992668517C59308FA55B1F1B80AC147C1338628 were detected!"}

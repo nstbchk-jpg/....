@@ -1,4 +1,4 @@
-import requests, urllib3, json
+import requests, urllib3, json, copy
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 SEPM_IP="******"; USER="******"; PASS="******"
@@ -13,24 +13,46 @@ print("Авторизація ОК")
 pols=requests.get(f"{BASE}/policies/summary",params={"pageSize":200},headers=h,verify=False).json()["content"]
 target=next(p for p in pols if p.get("name","").strip().lower()==TEST_POLICY_NAME.lower())
 pid=target["id"]
-print(f"Політика: {target['name']}\n")
+
+data=requests.get(f"{BASE}/policies/exceptions/{pid}",headers=h,verify=False).json()
+print(f"Політика: {data.get('name')}")
+print(f"Ключі кореня: {list(data.keys())}")
+cfg=data.get("configuration",{})
+wl=cfg.get("whitelistrules",[])
+print(f"whitelist правил: {len(wl)}")
+
+# перевіряємо дублікати по sha2 у наявних правилах
+seen={}
+for r in wl:
+    s=r.get("processfile",{}).get("sha2")
+    seen[s]=seen.get(s,0)+1
+dups={s:c for s,c in seen.items() if c>1}
+print(f"Дублікати sha2 у whitelist: {dups if dups else 'нема'}\n")
 
 new_rule={"rulestate":{"enabled":True},"processfile":{"sha2":SHA2,"name":"TEST",
     "company":"","size":0,"description":None,"directory":""},"action":"IGNORE"}
 
-# ТІЛО ТІЛЬКИ З НОВИМ ПРАВИЛОМ, без існуючих
-variants = [
-    ("тільки whitelistrules на корені", {"whitelistrules":[new_rule]}),
-    ("configuration з тільки новим", {"configuration":{"whitelistrules":[new_rule]}}),
-    ("add_whitelist", {"add_whitelistrules":[new_rule]}),
-]
+# ВАРІАНТ 1: повний об'єкт, дедуплікований whitelist, + новий хеш, PUT
+d1=copy.deepcopy(data)
+uniq=[]; sset=set()
+for r in d1["configuration"]["whitelistrules"]:
+    s=r.get("processfile",{}).get("sha2")
+    if s not in sset:
+        uniq.append(r); sset.add(s)
+uniq.append(new_rule)
+d1["configuration"]["whitelistrules"]=uniq
+if d1.get("desc"): d1["desc"]=d1["desc"][:1024]
 
-for name,body in variants:
-    for method in ("put","patch"):
-        r=getattr(requests,method)(f"{BASE}/policies/exceptions/{pid}",json=body,headers=h,verify=False)
-        chk=requests.get(f"{BASE}/policies/exceptions/{pid}",headers=h,verify=False).json()
-        found=SHA2.lower() in json.dumps(chk).lower()
-        print(f"[{method.upper()}] {name}: {r.status_code} | хеш: {'Є ✓✓✓' if found else 'нема'} | {r.text[:90]}")
-        if found:
-            print("\n>>> ЗНАЙШЛИ РОБОЧИЙ ВАРІАНТ!")
-            break
+r1=requests.put(f"{BASE}/policies/exceptions/{pid}",json=d1,headers=h,verify=False)
+chk=requests.get(f"{BASE}/policies/exceptions/{pid}",headers=h,verify=False).json()
+f1=SHA2.lower() in json.dumps(chk).lower()
+print(f"[PUT] повний+дедуплікація: {r1.status_code} | хеш: {'Є ✓✓✓' if f1 else 'нема'} | {r1.text[:120]}")
+
+# ВАРІАНТ 2: PATCH з name + повним configuration
+if not f1:
+    d2=copy.deepcopy(data)
+    d2["configuration"]["whitelistrules"]=uniq
+    r2=requests.patch(f"{BASE}/policies/exceptions/{pid}",json=d2,headers=h,verify=False)
+    chk=requests.get(f"{BASE}/policies/exceptions/{pid}",headers=h,verify=False).json()
+    f2=SHA2.lower() in json.dumps(chk).lower()
+    print(f"[PATCH] повний+name: {r2.status_code} | хеш: {'Є ✓✓✓' if f2 else 'нема'} | {r2.text[:120]}")

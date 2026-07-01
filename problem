@@ -1,5 +1,9 @@
 Авторизація ОК
-Політика: SOC Test Exceptions | тип: exceptions
+Політика: SOC Test Exceptions
 
-PUT (об'єкт незмінений): 400
-ПОВНА ВІДПОВІДЬ: {"errorCode":"400","appErrorCode":"","errorMessage":"Duplicate blacklist or whitelist with 573E7838AA7DCD4A75188A68E992668517C59308FA55B1F1B80AC147C1338628 were detected!"}
+[PUT] тільки whitelistrules на корені: 400 | хеш: нема | {"errorCode":"400","appErrorCode":"","errorMessage":"'name' Name field is required."}
+[PATCH] тільки whitelistrules на корені: 200 | хеш: нема |
+[PUT] configuration з тільки новим: 400 | хеш: нема | {"errorCode":"400","appErrorCode":"","errorMessage":"'name' Name field is required."}
+[PATCH] configuration з тільки новим: 200 | хеш: нема |
+[PUT] add_whitelist: 400 | хеш: нема | {"errorCode":"400","appErrorCode":"","errorMessage":"'name' Name field is required."}
+[PATCH] add_whitelist: 200 | хеш: нема |

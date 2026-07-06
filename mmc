@@ -1,0 +1,8 @@
+ls \\ip\c$\Users
+ls : Cannot find path '\\ip\c$\Users' because it does not exist.
+At line:1 char:1
+
+ls \\ip\c$\Users
+~~~~~
+CategoryInfo : ObjectNotFound: (\\ip\c$\Users:String) [Get-ChildItem], ItemNotFoundException
+FullyQualifiedErrorId : PathNotFound,Microsoft.PowerShell.Commands.GetChildItemCommand

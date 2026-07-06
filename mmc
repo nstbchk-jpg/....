@@ -1,8 +1,38 @@
-$com = [activator]::CreateInstance([type]::GetTypeFromProgID("MMC20.Application","ip"))
-PS C:\Users\****> $com.Document.ActivateView.ExecuteShellCommand("C:\Windows\System32\calc.exe",$null,$null,"7")
-You cannot call a method on a null-valued expression.
-At line:1 char:1
+PS C:\Users\****> $com
 
-$com.Document.ActivateView.ExecuteShellCommand("C:\Windows\System32\c ...
-  + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
-  + FullyQualifiedErrorId : InvokeMethodOnNull
+Document     : System.ComObject
+Frame        : System.ComObject
+Visible      : 0
+UserControl  : 0
+VersionMajor : 3
+VersionMinor : 0
+
+PS C:\Users\*****> $com.Document
+
+Views          : System.ComObject
+SnapIns        : System.ComObject
+ActiveView     : System.ComObject
+Name           :
+Location       :
+IsSaved        : 1
+Mode           : 0
+RootNode       : System.ComObject
+ScopeNamespace : System.ComObject
+Application    : System.ComObject
+
+PS C:\Users\*****> $com.Document.ActiveView
+
+ActiveScopeNode      : System.ComObject
+Selection            : System.ComObject
+ListItems            : System.ComObject
+Document             : System.ComObject
+SelectionContextMenu :
+Frame                : System.ComObject
+ScopeTreeVisible     : 1
+StatusBarText        :
+Memento              : <ViewMemento>  <ViewSettings Flag_ResultView="true" Flag_TaskPadID="true">    <GUID>{00000000-0000-0000-0000-000000000000}</GUID>    <ResultView Type="List"/>  </ViewSettings>  <BookMark
+                       NodeID="1"/></ViewMemento>
+Columns              : System.ComObject
+ListViewMode         : 3
+ControlObject        :
+

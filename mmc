@@ -1,8 +1,33 @@
-ls \\ip\c$\Users
-ls : Cannot find path '\\ip\c$\Users' because it does not exist.
+PS C:\*****> Test-NetConnection ip -Port 445
+
+ComputerName     : ip
+RemoteAddress    : ip
+RemotePort       : 445
+InterfaceAlias   : Ethernet0
+SourceAddress    : ip
+TcpTestSucceeded : True
+
+PS C:\Users\***> Test-NetConnection ip -Port 135
+
+ComputerName     : ip
+RemoteAddress    : ip
+RemotePort       : 135
+InterfaceAlias   : Ethernet0
+SourceAddress    : ip
+TcpTestSucceeded : True
+
+PS C:\Users\****> ls \\ip\c$
+ls : Cannot find path '\\ip\c$' because it does not exist.
 At line:1 char:1
 
-ls \\ip\c$\Users
-~~~~~
-CategoryInfo : ObjectNotFound: (\\ip\c$\Users:String) [Get-ChildItem], ItemNotFoundException
+ls \\ip\c$
+  + CategoryInfo          : ObjectNotFound: (\\ip\c$:String) [Get-ChildItem], ItemNotFoundException
+  + FullyQualifiedErrorId : PathNotFound,Microsoft.PowerShell.Commands.GetChildItemCommand
+PS C:\Users\***> dir \\ip\c$
+dir : Cannot find path '\\ip\c$' because it does not exist.
+At line:1 char:1
+
+dir \\ip\c$
+~~~~
+CategoryInfo : ObjectNotFound: (\\ip\c$:String) [Get-ChildItem], ItemNotFoundException
 FullyQualifiedErrorId : PathNotFound,Microsoft.PowerShell.Commands.GetChildItemCommand

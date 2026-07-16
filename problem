@@ -1,4 +1,16 @@
- line 17, in <module>
-    tok = s.post(f"{BASE_URL}/identity/authenticate",
-                    ^^^^^^^^
-NameError: name 'BASE_URL' is not defined
+auth ok
+
+--- bare
+    URL:    https://*********:8446/sepm/api/v1/policy-objects/fingerprints
+    status: 400
+    body:   {"errorCode":"400","appErrorCode":"","errorMessage":"name argument must not be empty."}
+
+--- pageIndex/pageSize
+    URL:    https://*********:8446/sepm/api/v1/policy-objects/fingerprints?pageIndex=1&pageSize=100
+    status: 400
+    body:   {"errorCode":"400","appErrorCode":"","errorMessage":"name argument must not be empty."}
+
+--- sort/pageSize
+    URL:    https://*********:8446/sepm/api/v1/policy-objects/fingerprints?pageSize=100&sort=NAME
+    status: 400
+    body:   {"errorCode":"400","appErrorCode":"","errorMessage":"name argument must not be empty."}

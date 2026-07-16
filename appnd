@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-READ-ONLY. Тягне fingerprint list за іменем і друкує його структуру.
-Нічого не створює й не змінює.
+READ-ONLY. Знаходить політику 'SOC Test App' у /policies/summary,
+показує її id + тип, і пробує дотягнути її деталі різними ендпоінтами.
+Нічого не змінює.
 """
 import requests, urllib3, json
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -12,7 +13,7 @@ USER     = "***********"
 PASS     = "**********"
 DOMAIN   = ""
 BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
-LIST_NAME = "SOC Test App"
+TARGET   = "SOC Test App"
 VERIFY_TLS = False
 # ───────────────────────────────────────────────────────
 
@@ -23,45 +24,52 @@ tok = s.post(f"{BASE_URL}/identity/authenticate",
 s.headers.update({"Authorization": f"Bearer {tok}"})
 print("auth ok\n")
 
-# GET за іменем (ендпоінт вимагає ?name=)
-r = s.get(f"{BASE_URL}/policy-objects/fingerprints",
-          params={"name": LIST_NAME}, verify=VERIFY_TLS, timeout=30)
-print(f"GET ?name={LIST_NAME!r}  ->  HTTP {r.status_code}\n")
-
+# 1. SUMMARY усіх політик
+r = s.get(f"{BASE_URL}/policies/summary",
+          params={"pageIndex": 1, "pageSize": 200},
+          verify=VERIFY_TLS, timeout=30)
+print(f"GET /policies/summary -> HTTP {r.status_code}")
 if r.status_code != 200:
-    print("body:", r.text[:600])
+    print(r.text[:500]); raise SystemExit
+data = r.json()
+content = data.get("content", data if isinstance(data, list) else [])
+print(f"всього політик у відповіді: {len(content)}\n")
+
+if content:
+    print("=== ключі одного елемента summary ===")
+    print(list(content[0].keys()), "\n")
+
+# 2. знайти нашу політику за іменем
+matches = [p for p in content if (p.get("name") or "").strip() == TARGET]
+if not matches:
+    # часткові збіги на випадок пробілів/регістру
+    matches = [p for p in content if TARGET.lower() in (p.get("name") or "").lower()]
+
+if not matches:
+    print(f"'{TARGET}' у summary не знайдено. Ось усі імена+типи:")
+    for p in content:
+        print(f"  - {p.get('name')!r:45}  type={p.get('policytype') or p.get('contenttype') or p.get('type')}")
     raise SystemExit
 
-obj = r.json()
+print("=== ЗНАЙДЕНО ===")
+for p in matches:
+    print(json.dumps(p, indent=2, ensure_ascii=False))
 
-# нормалізуємо: якщо прийшов список — беремо перший збіг
-if isinstance(obj, list):
-    print(f"[тип відповіді: list, елементів: {len(obj)}]")
-    obj = next((x for x in obj if x.get("name") == LIST_NAME), obj[0] if obj else None)
-else:
-    print("[тип відповіді: object]")
+pol = matches[0]
+pid = pol.get("id")
+ptype = pol.get("policytype") or pol.get("contenttype") or pol.get("type")
+print(f"\nid={pid}  type={ptype}\n")
 
-if not obj:
-    print("Лист із таким іменем не знайдено.")
-    raise SystemExit
-
-print("\n=== КЛЮЧІ ОБ'ЄКТА ===")
-for k, v in obj.items():
-    if k == "data" and isinstance(v, list):
-        print(f"  {k:<14} : list[{len(v)}]  (перші 3: {v[:3]})")
-    else:
-        vs = str(v)
-        print(f"  {k:<14} : {vs[:80]}")
-
-print("\n=== ВАЖЛИВЕ ===")
-print(f"  id        : {obj.get('id')}")
-print(f"  name      : {obj.get('name')}")
-print(f"  hashType  : {obj.get('hashType')}   <-- MD5 чи SHA256 приймає лист")
-print(f"  data count: {len(obj.get('data', []))}")
-print(f"  groupIds  : {obj.get('groupIds')}")
-
-print("\n=== ПОВНИЙ JSON (data урізано до 5) ===")
-preview = dict(obj)
-if isinstance(preview.get("data"), list):
-    preview["data"] = preview["data"][:5] + (["...(урізано)"] if len(preview["data"]) > 5 else [])
-print(json.dumps(preview, indent=2, ensure_ascii=False))
+# 3. пробуємо дотягнути ДЕТАЛІ політики різними шляхами
+candidates = [
+    f"/policies/{ptype}/{pid}" if ptype else None,
+    f"/policies/adc/{pid}",
+    f"/policies/application-and-device-control/{pid}",
+    f"/policies/app-device-control/{pid}",
+    f"/policies/{pid}",
+]
+print("=== ПРОБА ДЕТАЛЕЙ ===")
+for path in filter(None, candidates):
+    rr = s.get(f"{BASE_URL}{path}", verify=VERIFY_TLS, timeout=30)
+    print(f"\n--- GET {path} -> HTTP {rr.status_code}")
+    print(f"    body: {rr.text[:300]}")

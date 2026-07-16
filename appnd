@@ -3,7 +3,7 @@
 sepm_push_hash.py — залити хеш у File Fingerprint List на SEPM через REST API.
 
 Архітектура: хеші живуть НЕ в ADC-політиці, а у File Fingerprint List
-(/policyobjects/fingerprints). Щоб блок спрацював, лист має бути призначений
+(/policy-objects/fingerprints). Щоб блок спрацював, лист має бути призначений
 групі через System Lockdown у blacklist-режимі. Права: System Administrator.
 """
 
@@ -53,7 +53,7 @@ class SEPM:
 
     # 2. знайти лист за іменем -> повний об'єкт з data[]
     def find_list(self, name):
-        r = self.s.get(f"{BASE_URL}/policyobjects/fingerprints",
+        r = self.s.get(f"{BASE_URL}/policy-objects/fingerprints",
                        verify=VERIFY_TLS, timeout=30)
         r.raise_for_status()
         for item in r.json():
@@ -62,7 +62,7 @@ class SEPM:
         return None
 
     def get_list(self, fp_id):
-        r = self.s.get(f"{BASE_URL}/policyobjects/fingerprints/{fp_id}",
+        r = self.s.get(f"{BASE_URL}/policy-objects/fingerprints/{fp_id}",
                        verify=VERIFY_TLS, timeout=30)
         r.raise_for_status()
         return r.json()
@@ -72,7 +72,7 @@ class SEPM:
         # Метод різниться по версіях: сучасні -> PATCH, деякі старіші -> POST.
         # Якщо 405 — переключи на self.s.post. Звір з on-box Swagger:
         # https://<SEPM>:8446/sepm/restapidocs.html
-        r = self.s.patch(f"{BASE_URL}/policyobjects/fingerprints/{fp['id']}",
+        r = self.s.patch(f"{BASE_URL}/policy-objects/fingerprints/{fp['id']}",
                          json=fp, verify=VERIFY_TLS, timeout=30)
         r.raise_for_status()
         return r.json() if r.text else {"status": r.status_code}
@@ -80,7 +80,7 @@ class SEPM:
     def create_list(self, name, hash_type, hashes):
         payload = {"name": name, "hashType": hash_type, "source": "REST_API",
                    "description": "created via REST API", "data": hashes, "groupIds": []}
-        r = self.s.post(f"{BASE_URL}/policyobjects/fingerprints",
+        r = self.s.post(f"{BASE_URL}/policy-objects/fingerprints",
                         json=payload, verify=VERIFY_TLS, timeout=30)
         r.raise_for_status()
         return r.json()                    # -> {"id": "..."}

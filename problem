@@ -1,5 +1,41 @@
 auth ok
 
-GET ?name='SOC Test App'  ->  HTTP 410
+GET /policies/summary -> HTTP 200
+всього політик у відповіді: 290
 
-body: {"errorCode":"410","appErrorCode":"","errorMessage":"Fingerprint list with ID SOC Test App do not exist"}
+=== ключі одного елемента summary ===
+['sources', 'enabled', 'desc', 'name', 'lastmodifiedtime', 'id', 'domainid', 'policytype', 'subtype', 'assignedtocloudgroups', 'assignedtolocations']
+
+=== ЗНАЙДЕНО ===
+{
+  "sources": [],
+  "enabled": true,
+  "desc": "",
+  "name": "SOC Test APP",
+  "lastmodifiedtime": 1783807979985,
+  "id": "id count",
+  "domainid": "domain id",
+  "policytype": "adc",
+  "subtype": null,
+  "assignedtocloudgroups": null,
+  "assignedtolocations": null
+}
+
+id=id count  type=adc
+
+=== ПРОБА ДЕТАЛЕЙ ===
+
+--- GET /policies/adc/id count -> HTTP 404
+    body: <!doctype html><html lang="en"><head><title>HTTP Status 404 – Not Found</title><style type="text/css">body {font-family:Tahoma,Arial,sans-serif;} h1, h2, h3, b {color:white;background-color:#525D76;} h1 {font-size:22px;} h2 {font-size:16px;} h3 {font-size:14px;} p {font-size:12px;} a {color:black;}
+
+--- GET /policies/adc/id count -> HTTP 404
+    body: <!doctype html><html lang="en"><head><title>HTTP Status 404 – Not Found</title><style type="text/css">body {font-family:Tahoma,Arial,sans-serif;} h1, h2, h3, b {color:white;background-color:#525D76;} h1 {font-size:22px;} h2 {font-size:16px;} h3 {font-size:14px;} p {font-size:12px;} a {color:black;}
+
+--- GET /policies/application-and-device-control/id count -> HTTP 404
+    body: <!doctype html><html lang="en"><head><title>HTTP Status 404 – Not Found</title><style type="text/css">body {font-family:Tahoma,Arial,sans-serif;} h1, h2, h3, b {color:white;background-color:#525D76;} h1 {font-size:22px;} h2 {font-size:16px;} h3 {font-size:14px;} p {font-size:12px;} a {color:black;}
+
+--- GET /policies/app-device-control/id count -> HTTP 404
+    body: <!doctype html><html lang="en"><head><title>HTTP Status 404 – Not Found</title><style type="text/css">body {font-family:Tahoma,Arial,sans-serif;} h1, h2, h3, b {color:white;background-color:#525D76;} h1 {font-size:22px;} h2 {font-size:16px;} h3 {font-size:14px;} p {font-size:12px;} a {color:black;}
+
+--- GET /policies/id count -> HTTP 404
+    body: <!doctype html><html lang="en"><head><title>HTTP Status 404 – Not Found</title><style type="text/css">body {font-family:Tahoma,Arial,sans-serif;} h1, h2, h3, b {color:white;background-color:#525D76;} h1 {font-size:22px;} h2 {font-size:16px;} h3 {font-size:14px;} p {font-size:12px;} a {color:black;}

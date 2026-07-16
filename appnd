@@ -1,136 +1,32 @@
 #!/usr/bin/env python3
-"""
-sepm_push_hash.py — залити хеш у File Fingerprint List на SEPM через REST API.
-
-Архітектура: хеші живуть НЕ в ADC-політиці, а у File Fingerprint List
-(/policy-objects/fingerprints). Щоб блок спрацював, лист має бути призначений
-групі через System Lockdown у blacklist-режимі. Права: System Administrator.
-"""
-
-import sys
-import requests
-import urllib3
-
+"""Діагностика GET /policy-objects/fingerprints — показує статус і тіло відповіді."""
+import requests, urllib3, json
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# ── КОНФІГ ────────────────────────────────────────────────────────────────────
-SEPM_IP  = "*********"
-USER     = "***********"
-PASS     = "**********"
-DOMAIN   = ""                      # "" == дефолтний домен
+SEPM_IP = "*********"
+USER    = "***********"
+PASS    = "**********"
 BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
 
-LIST_NAME = "SOC Test App"         # ім'я fingerprint-листа
-HASH_TYPE = "SHA256"               # "SHA256" | "MD5"
-HASHES    = [                      # хеш(і) для заливки
-    # "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-]
+s = requests.Session()
+tok = s.post(f"{BASE_URL}/identity/authenticate",
+             json={"username": USER, "password": PASS, "domain": ""},
+             verify=False, timeout=30).json()["token"]
+s.headers.update({"Authorization": f"Bearer {tok}"})
+print("auth ok\n")
 
-CREATE_IF_MISSING = True           # створити лист, якщо не знайдено
-ASSIGN_GROUP_ID   = None           # "GROUP_ID" щоб прив'язати до групи для lockdown, або None
-VERIFY_TLS        = False          # у проді -> шлях до CA-бандла замість False
-# ──────────────────────────────────────────────────────────────────────────────
+def try_get(label, url, **params):
+    r = s.get(url, params=params or None, verify=False, timeout=30)
+    print(f"--- {label}")
+    print(f"    URL:    {r.url}")
+    print(f"    status: {r.status_code}")
+    print(f"    body:   {r.text[:400]}\n")
+    return r
 
+FP = f"{BASE_URL}/policy-objects/fingerprints"
 
-def normalize(h):
-    return h.strip().upper()
-
-
-class SEPM:
-    def __init__(self):
-        self.s = requests.Session()
-
-    # 1. auth (легасі username/password) -> Bearer token
-    def authenticate(self):
-        r = self.s.post(f"{BASE_URL}/identity/authenticate",
-                        json={"username": USER, "password": PASS, "domain": DOMAIN},
-                        verify=VERIFY_TLS, timeout=30)
-        r.raise_for_status()
-        token = r.json()["token"]
-        self.s.headers.update({"Authorization": f"Bearer {token}",
-                               "Content-Type": "application/json"})
-        return token
-
-    # 2. знайти лист за іменем -> повний об'єкт з data[]
-    def find_list(self, name):
-        r = self.s.get(f"{BASE_URL}/policy-objects/fingerprints",
-                       verify=VERIFY_TLS, timeout=30)
-        r.raise_for_status()
-        for item in r.json():
-            if item.get("name") == name:
-                return self.get_list(item["id"])   # деякі версії не віддають data[] у списку
-        return None
-
-    def get_list(self, fp_id):
-        r = self.s.get(f"{BASE_URL}/policy-objects/fingerprints/{fp_id}",
-                       verify=VERIFY_TLS, timeout=30)
-        r.raise_for_status()
-        return r.json()
-
-    # 3. оновити існуючий лист
-    def update_list(self, fp):
-        # Метод різниться по версіях: сучасні -> PATCH, деякі старіші -> POST.
-        # Якщо 405 — переключи на self.s.post. Звір з on-box Swagger:
-        # https://<SEPM>:8446/sepm/restapidocs.html
-        r = self.s.patch(f"{BASE_URL}/policy-objects/fingerprints/{fp['id']}",
-                         json=fp, verify=VERIFY_TLS, timeout=30)
-        r.raise_for_status()
-        return r.json() if r.text else {"status": r.status_code}
-
-    def create_list(self, name, hash_type, hashes):
-        payload = {"name": name, "hashType": hash_type, "source": "REST_API",
-                   "description": "created via REST API", "data": hashes, "groupIds": []}
-        r = self.s.post(f"{BASE_URL}/policy-objects/fingerprints",
-                        json=payload, verify=VERIFY_TLS, timeout=30)
-        r.raise_for_status()
-        return r.json()                    # -> {"id": "..."}
-
-    # 4. (опційно) прив'язка до групи для system lockdown
-    def assign_to_group(self, group_id, fp_id):
-        r = self.s.put(f"{BASE_URL}/groups/{group_id}/system-lockdown/fingerprints/{fp_id}",
-                       json={"group_id": group_id, "fingerprint_id": fp_id},
-                       verify=VERIFY_TLS, timeout=30)
-        r.raise_for_status()
-        return r.status_code               # 200 == OK
-
-
-def main():
-    if not HASHES:
-        sys.exit("[!] Список HASHES порожній — додай хеш(і) у конфіг вгорі.")
-
-    sepm = SEPM()
-    print("[*] auth...", file=sys.stderr)
-    sepm.authenticate()
-
-    new_hashes = [normalize(h) for h in HASHES]
-    fp = sepm.find_list(LIST_NAME)
-
-    if fp is None:
-        if not CREATE_IF_MISSING:
-            sys.exit(f"[!] Лист '{LIST_NAME}' не знайдено. Увімкни CREATE_IF_MISSING "
-                     f"або перевір ім'я/тип (можливо це ADC-політика — тоді тільки GUI).")
-        print(f"[*] створюю новий лист '{LIST_NAME}'...", file=sys.stderr)
-        res = sepm.create_list(LIST_NAME, HASH_TYPE, new_hashes)
-        fp_id = res.get("id")
-        print(f"[+] створено, id={fp_id}, хешів={len(new_hashes)}")
-    else:
-        existing = {normalize(h) for h in fp.get("data", [])}
-        to_add = [h for h in new_hashes if h not in existing]
-        fp_id = fp["id"]
-        if not to_add:
-            print("[=] усі хеші вже в листі, нічого робити")
-        else:
-            fp["data"] = list(existing | set(to_add))
-            sepm.update_list(fp)
-            print(f"[+] додано {len(to_add)} нових хешів у '{LIST_NAME}' "
-                  f"(разом {len(fp['data'])})")
-
-    if ASSIGN_GROUP_ID:
-        print(f"[*] прив'язую лист до групи {ASSIGN_GROUP_ID} (lockdown)...", file=sys.stderr)
-        code = sepm.assign_to_group(ASSIGN_GROUP_ID, fp_id)
-        print(f"[+] assign -> HTTP {code}. Нагадування: System Lockdown у групі "
-              f"має бути ON у blacklist-режимі, інакше блоку не буде.")
-
-
-if __name__ == "__main__":
-    main()
+try_get("bare",                 FP)
+try_get("pageIndex/pageSize",   FP, pageIndex=1, pageSize=100)
+try_get("sort/pageSize",        FP, pageSize=100, sort="NAME")
+# буває, що колекція не читається, але окремий об'єкт треба тягти по id —
+# тоді дізнаємось валідний контракт з тіла помилок вище

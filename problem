@@ -1,3 +1,13 @@
- HASHES    = [AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA                      # хеш(і) для заливки
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-NameError: name 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' is not defined
+[*] auth...
+Traceback (most recent call last):
+  File "\****************", line 136, in <module>
+    main()
+    ~~~~^^
+  File "****************", line 106, in main
+    fp = sepm.find_list(LIST_NAME)
+  File "****************", line 58, in find_list
+    r.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "****************", line 1028, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 404 Client Error:  for url: https://****************:8446/sepm/api/v1/policyobjects/fingerprints

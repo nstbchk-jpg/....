@@ -1,32 +1,67 @@
 #!/usr/bin/env python3
-"""Діагностика GET /policy-objects/fingerprints — показує статус і тіло відповіді."""
+"""
+READ-ONLY. Тягне fingerprint list за іменем і друкує його структуру.
+Нічого не створює й не змінює.
+"""
 import requests, urllib3, json
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-SEPM_IP = "*********"
-USER    = "***********"
-PASS    = "**********"
+# ── КОНФІГ ─────────────────────────────────────────────
+SEPM_IP  = "*********"
+USER     = "***********"
+PASS     = "**********"
+DOMAIN   = ""
 BASE_URL = f"https://{SEPM_IP}:8446/sepm/api/v1"
+LIST_NAME = "SOC Test App"
+VERIFY_TLS = False
+# ───────────────────────────────────────────────────────
 
 s = requests.Session()
 tok = s.post(f"{BASE_URL}/identity/authenticate",
-             json={"username": USER, "password": PASS, "domain": ""},
-             verify=False, timeout=30).json()["token"]
+             json={"username": USER, "password": PASS, "domain": DOMAIN},
+             verify=VERIFY_TLS, timeout=30).json()["token"]
 s.headers.update({"Authorization": f"Bearer {tok}"})
 print("auth ok\n")
 
-def try_get(label, url, **params):
-    r = s.get(url, params=params or None, verify=False, timeout=30)
-    print(f"--- {label}")
-    print(f"    URL:    {r.url}")
-    print(f"    status: {r.status_code}")
-    print(f"    body:   {r.text[:400]}\n")
-    return r
+# GET за іменем (ендпоінт вимагає ?name=)
+r = s.get(f"{BASE_URL}/policy-objects/fingerprints",
+          params={"name": LIST_NAME}, verify=VERIFY_TLS, timeout=30)
+print(f"GET ?name={LIST_NAME!r}  ->  HTTP {r.status_code}\n")
 
-FP = f"{BASE_URL}/policy-objects/fingerprints"
+if r.status_code != 200:
+    print("body:", r.text[:600])
+    raise SystemExit
 
-try_get("bare",                 FP)
-try_get("pageIndex/pageSize",   FP, pageIndex=1, pageSize=100)
-try_get("sort/pageSize",        FP, pageSize=100, sort="NAME")
-# буває, що колекція не читається, але окремий об'єкт треба тягти по id —
-# тоді дізнаємось валідний контракт з тіла помилок вище
+obj = r.json()
+
+# нормалізуємо: якщо прийшов список — беремо перший збіг
+if isinstance(obj, list):
+    print(f"[тип відповіді: list, елементів: {len(obj)}]")
+    obj = next((x for x in obj if x.get("name") == LIST_NAME), obj[0] if obj else None)
+else:
+    print("[тип відповіді: object]")
+
+if not obj:
+    print("Лист із таким іменем не знайдено.")
+    raise SystemExit
+
+print("\n=== КЛЮЧІ ОБ'ЄКТА ===")
+for k, v in obj.items():
+    if k == "data" and isinstance(v, list):
+        print(f"  {k:<14} : list[{len(v)}]  (перші 3: {v[:3]})")
+    else:
+        vs = str(v)
+        print(f"  {k:<14} : {vs[:80]}")
+
+print("\n=== ВАЖЛИВЕ ===")
+print(f"  id        : {obj.get('id')}")
+print(f"  name      : {obj.get('name')}")
+print(f"  hashType  : {obj.get('hashType')}   <-- MD5 чи SHA256 приймає лист")
+print(f"  data count: {len(obj.get('data', []))}")
+print(f"  groupIds  : {obj.get('groupIds')}")
+
+print("\n=== ПОВНИЙ JSON (data урізано до 5) ===")
+preview = dict(obj)
+if isinstance(preview.get("data"), list):
+    preview["data"] = preview["data"][:5] + (["...(урізано)"] if len(preview["data"]) > 5 else [])
+print(json.dumps(preview, indent=2, ensure_ascii=False))

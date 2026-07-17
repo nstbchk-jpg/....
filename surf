@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+"""
+READ-ONLY. Витягує OpenAPI/Swagger-опис SEPM і друкує всі маршрути,
+дотичні до політик / adc / control. Так дізнаємось, що API реально вміє.
+"""
+import requests, urllib3, json
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+SEPM_IP  = "*********"
+USER     = "***********"
+PASS     = "**********"
+DOMAIN   = ""
+ROOT     = f"https://{SEPM_IP}:8446/sepm"
+BASE_URL = f"{ROOT}/api/v1"
+VERIFY_TLS = False
+
+s = requests.Session()
+tok = s.post(f"{BASE_URL}/identity/authenticate",
+             json={"username": USER, "password": PASS, "domain": DOMAIN},
+             verify=VERIFY_TLS, timeout=30).json()["token"]
+s.headers.update({"Authorization": f"Bearer {tok}"})
+print("auth ok\n")
+
+# кандидати розташування специфікації
+spec_urls = [
+    f"{ROOT}/v2/api-docs",
+    f"{ROOT}/api/v1/swagger.json",
+    f"{ROOT}/swagger.json",
+    f"{ROOT}/v3/api-docs",
+    f"{ROOT}/api-docs",
+    f"{BASE_URL}/api-docs",
+]
+
+spec = None
+for u in spec_urls:
+    try:
+        r = s.get(u, verify=VERIFY_TLS, timeout=30)
+        ct = r.headers.get("content-type", "")
+        print(f"GET {u} -> {r.status_code}  ({ct[:40]})")
+        if r.status_code == 200 and "json" in ct.lower():
+            spec = r.json()
+            print(f"    ^ знайдено специфікацію тут\n")
+            break
+    except Exception as e:
+        print(f"GET {u} -> ERR {e}")
+
+if not spec:
+    print("\nSwagger-специфікацію не знайдено за стандартними адресами.")
+    print("Перевір у браузері: " + ROOT + "/restapidocs.html  або  " + ROOT + "/apidocs")
+    raise SystemExit
+
+paths = spec.get("paths", {})
+print(f"усього маршрутів у специфікації: {len(paths)}\n")
+
+def methods_of(path):
+    return ",".join(m.upper() for m in paths[path]
+                    if m in ("get", "post", "put", "patch", "delete"))
+
+# 1) повний список усіх маршрутів -> у файл
+with open("sepm_endpoints.txt", "w", encoding="utf-8") as f:
+    for path in sorted(paths):
+        f.write(f"[{methods_of(path):<24}] {path}\n")
+print("повний список усіх маршрутів збережено у sepm_endpoints.txt\n")
+
+# 2) дотичні до нашої задачі — у консоль
+kw = ("polic", "adc", "control", "application", "fingerprint", "lockdown")
+hits = [p for p in sorted(paths) if any(k in p.lower() for k in kw)]
+print(f"=== ДОТИЧНІ МАРШРУТИ ({len(hits)}) ===")
+for path in hits:
+    print(f"  [{methods_of(path):<24}] {path}")
+
+# 3) прямий вердикт по ADC
+adc_routes = [p for p in paths if "adc" in p.lower()
+              or "application-and-device" in p.lower()]
+print("\n=== ВЕРДИКТ ADC ===")
+if adc_routes:
+    print("  Знайдено ADC-маршрути:")
+    for p in adc_routes:
+        print(f"    [{methods_of(p)}] {p}")
+else:
+    print("  Жодного ADC-маршруту в API немає -> редагування ADC-політики")
+    print("  через REST на цій збірці неможливе (підтверджено специфікацією).")

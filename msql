@@ -1,11 +1,15 @@
-SELECT 'SELECT * FROM (' + STUFF((
-  SELECT ' UNION ALL SELECT '''+sc.name+'.'+t.name+'.'+c.name+''' AS loc, COUNT(*) AS hits FROM '
-         +QUOTENAME(sc.name)+'.'+QUOTENAME(t.name)+' WHERE '+QUOTENAME(c.name)+' LIKE N''%ТВІЙ_ХЕШ%'''
-  FROM sys.columns c
-  JOIN sys.tables t   ON c.object_id=t.object_id
-  JOIN sys.schemas sc ON t.schema_id=sc.schema_id
-  JOIN sys.types ty   ON c.user_type_id=ty.user_type_id
-  WHERE ty.name IN('varchar','nvarchar','text','ntext')
-    AND (c.max_length = -1 OR c.max_length >= 200)
-  FOR XML PATH(''),TYPE).value('.','NVARCHAR(MAX)'),1,11,'')
-  + ') q WHERE hits > 0;' AS run_me;
+SELECT t.name AS table_name,
+       c.name AS column_name,
+       ty.name AS data_type,
+       c.max_length
+FROM sys.columns c
+JOIN sys.tables t  ON c.object_id = t.object_id
+JOIN sys.types ty  ON c.user_type_id = ty.user_type_id
+WHERE
+    -- колонки з "hash/fingerprint/md5/sha" у назві
+    (c.name LIKE '%HASH%' OR c.name LIKE '%FINGERPRINT%'
+     OR c.name LIKE '%MD5%' OR c.name LIKE '%SHA%')
+    -- АБО текстові колонки рівно під MD5/SHA256
+    OR (ty.name IN ('varchar','nvarchar','char','nchar')
+        AND c.max_length IN (32, 64, 40, 128))
+ORDER BY table_name, column_name;

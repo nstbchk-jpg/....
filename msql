@@ -1,15 +1,20 @@
 SELECT t.name AS table_name,
        c.name AS column_name,
        ty.name AS data_type,
-       c.max_length
+       c.max_length,
+       CASE
+         WHEN ty.name IN ('nvarchar','nchar') THEN c.max_length/2
+         ELSE c.max_length
+       END AS chars
 FROM sys.columns c
 JOIN sys.tables t  ON c.object_id = t.object_id
 JOIN sys.types ty  ON c.user_type_id = ty.user_type_id
 WHERE
-    -- колонки з "hash/fingerprint/md5/sha" у назві
+    -- за назвою
     (c.name LIKE '%HASH%' OR c.name LIKE '%FINGERPRINT%'
-     OR c.name LIKE '%MD5%' OR c.name LIKE '%SHA%')
-    -- АБО текстові колонки рівно під MD5/SHA256
-    OR (ty.name IN ('varchar','nvarchar','char','nchar')
-        AND c.max_length IN (32, 64, 40, 128))
+     OR c.name LIKE '%MD5%' OR c.name LIKE '%SHA%' OR c.name LIKE '%CRC%')
+    -- або текстові колонки під довжину хеша (у СИМВОЛАХ, з поправкою на nvarchar)
+    OR (ty.name IN ('char','nchar','varchar','nvarchar')
+        AND CASE WHEN ty.name IN ('nvarchar','nchar') THEN c.max_length/2
+                 ELSE c.max_length END IN (32, 40, 64, 128))
 ORDER BY table_name, column_name;

@@ -1,16 +1,10 @@
-SET NOCOUNT ON;
-
-DECLARE @needle NVARCHAR(100) = '%SOC Test%';
-DECLARE @sql NVARCHAR(MAX) = '';
-
-SELECT @sql = @sql +
-    'IF EXISTS (SELECT 1 FROM ' + QUOTENAME(s.name) + '.' + QUOTENAME(t.name) +
-    ' WHERE ' + QUOTENAME(c.name) + ' LIKE @n) ' +
-    'PRINT ''' + s.name + '.' + t.name + ' -> ' + c.name + ''';' + CHAR(10)
+SELECT
+ 'SELECT ''' + s.name + '.' + t.name + '.' + c.name +
+ ''' AS loc, COUNT(*) AS hits FROM ' +
+ QUOTENAME(s.name) + '.' + QUOTENAME(t.name) +
+ ' WHERE ' + QUOTENAME(c.name) + ' LIKE ''%SOC Test%'';' AS run_me
 FROM sys.columns c
 JOIN sys.tables  t ON c.object_id = t.object_id
 JOIN sys.schemas s ON t.schema_id = s.schema_id
 JOIN sys.types  ty ON c.user_type_id = ty.user_type_id
 WHERE ty.name IN ('varchar','nvarchar','char','nchar','text','ntext');
-
-EXEC sp_executesql @sql, N'@n NVARCHAR(100)', @n = @needle;

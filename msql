@@ -1,17 +1,57 @@
-SET NOCOUNT ON;
-IF OBJECT_ID('tempdb..#hits') IS NOT NULL DROP TABLE #hits;
-CREATE TABLE #hits (loc NVARCHAR(400), hits INT);
+#!/usr/bin/env python3
+"""
+READ-ONLY розвідка бази SEPM (sem5) через pyodbc.
+Шукає задану назву по всіх текстових колонках і друкує де знайдено.
+Нічого не змінює. Креди/назви лишаються локально у цьому файлі.
+"""
+import pyodbc
 
-DECLARE @sql NVARCHAR(MAX)=N'';
-SELECT @sql = @sql +
- 'INSERT INTO #hits SELECT '''+sc.name+'.'+t.name+'.'+c.name+''','+
- 'COUNT(*) FROM '+QUOTENAME(sc.name)+'.'+QUOTENAME(t.name)+
- ' WHERE '+QUOTENAME(c.name)+' LIKE N''%SOC%'';'+CHAR(10)
-FROM sys.columns c
-JOIN sys.tables t   ON c.object_id=t.object_id
-JOIN sys.schemas sc ON t.schema_id=sc.schema_id
-JOIN sys.types ty   ON c.user_type_id=ty.user_type_id
-WHERE ty.name IN('varchar','nvarchar','char','nchar','text','ntext');
+# ── КОНФІГ (заповни у себе) ────────────────────────────
+SERVER   = "IP,1433"          # напр. "10.0.0.5,1433"
+DATABASE = "sem5"
+UID      = "sa"
+PWD      = "********"
+NEEDLE   = "SOC"              # що шукаємо (короткий фрагмент, регістр не важливий)
+DRIVER   = "{ODBC Driver 17 for SQL Server}"   # або "{SQL Server}" якщо 17-го нема
+# ───────────────────────────────────────────────────────
 
-EXEC sp_executesql @sql;
-SELECT * FROM #hits WHERE hits > 0 ORDER BY hits DESC;
+cn = pyodbc.connect(
+    f"DRIVER={DRIVER};SERVER={SERVER};DATABASE={DATABASE};"
+    f"UID={UID};PWD={PWD};TrustServerCertificate=yes",
+    timeout=10,
+)
+cur = cn.cursor()
+print(f"connected to {DATABASE}\n")
+
+# усі текстові колонки
+cur.execute("""
+    SELECT s.name, t.name, c.name
+    FROM sys.columns c
+    JOIN sys.tables t   ON c.object_id=t.object_id
+    JOIN sys.schemas s  ON t.schema_id=s.schema_id
+    JOIN sys.types ty   ON c.user_type_id=ty.user_type_id
+    WHERE ty.name IN ('varchar','nvarchar','char','nchar','text','ntext')
+""")
+cols = cur.fetchall()
+print(f"текстових колонок для перевірки: {len(cols)}\n")
+
+found = []
+for sch, tbl, col in cols:
+    q = f"SELECT COUNT(*) FROM [{sch}].[{tbl}] WHERE [{col}] LIKE ?"
+    try:
+        cur.execute(q, f"%{NEEDLE}%")
+        n = cur.fetchval()
+        if n:
+            found.append((sch, tbl, col, n))
+            print(f"  ЗНАЙДЕНО: {sch}.{tbl}.{col}  -> {n} рядк.")
+    except Exception as e:
+        # деякі колонки/типи можуть відмовляти — пропускаємо
+        pass
+
+if not found:
+    print("Ніде не знайдено. Спробуй інший NEEDLE (напр. 'Test' або 'admin' для перевірки).")
+else:
+    print(f"\nВсього місць: {len(found)}")
+    print("Далі: глянь типи колонок цих таблиць, щоб зрозуміти, де тіло політики.")
+
+cn.close()

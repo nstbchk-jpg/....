@@ -1,15 +1,11 @@
-SELECT t.name AS table_name,
-       c.name AS column_name,
-       ty.name AS data_type,
-       c.max_length,
-       CASE
-         WHEN ty.name IN ('nvarchar','nchar') THEN c.max_length/2
-         ELSE c.max_length
-       END AS chars
-FROM sys.columns c
-JOIN sys.tables t  ON c.object_id = t.object_id
-JOIN sys.types ty  ON c.user_type_id = ty.user_type_id
-WHERE
+SELECT 'SELECT * FROM (' + STUFF((
+  SELECT ' UNION ALL SELECT '''+t.name+'.'+c.name+''' AS loc, COUNT(*) AS hits FROM '
+         +QUOTENAME(SCHEMA_NAME(t.schema_id))+'.'+QUOTENAME(t.name)+
+         ' WHERE '+QUOTENAME(c.name)+' LIKE ''%ТВІЙ_ХЕШ%'''
+  FROM sys.columns c
+  JOIN sys.tables t  ON c.object_id = t.object_id
+  JOIN sys.types ty  ON c.user_type_id = ty.user_type_id
+  WHERE
     (
       (c.name LIKE '%HASH%' OR c.name LIKE '%FINGERPRINT%'
        OR c.name LIKE '%MD5%' OR c.name LIKE '%SHA%' OR c.name LIKE '%CRC%')
@@ -19,4 +15,6 @@ WHERE
     )
     AND c.name NOT LIKE '%\_ID' ESCAPE '\'
     AND c.name <> 'ID'
-ORDER BY table_name, column_name;
+    AND c.name NOT LIKE '%HOST%'
+  FOR XML PATH(''),TYPE).value('.','NVARCHAR(MAX)'),1,11,'')
+  + ') q WHERE hits > 0;' AS run_me;

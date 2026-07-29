@@ -10,11 +10,13 @@ FROM sys.columns c
 JOIN sys.tables t  ON c.object_id = t.object_id
 JOIN sys.types ty  ON c.user_type_id = ty.user_type_id
 WHERE
-    -- за назвою
-    (c.name LIKE '%HASH%' OR c.name LIKE '%FINGERPRINT%'
-     OR c.name LIKE '%MD5%' OR c.name LIKE '%SHA%' OR c.name LIKE '%CRC%')
-    -- або текстові колонки під довжину хеша (у СИМВОЛАХ, з поправкою на nvarchar)
-    OR (ty.name IN ('char','nchar','varchar','nvarchar')
-        AND CASE WHEN ty.name IN ('nvarchar','nchar') THEN c.max_length/2
-                 ELSE c.max_length END IN (32, 40, 64, 128))
+    (
+      (c.name LIKE '%HASH%' OR c.name LIKE '%FINGERPRINT%'
+       OR c.name LIKE '%MD5%' OR c.name LIKE '%SHA%' OR c.name LIKE '%CRC%')
+      OR (ty.name IN ('char','nchar','varchar','nvarchar')
+          AND CASE WHEN ty.name IN ('nvarchar','nchar') THEN c.max_length/2
+                   ELSE c.max_length END IN (32, 40, 64, 128))
+    )
+    AND c.name NOT LIKE '%\_ID' ESCAPE '\'
+    AND c.name <> 'ID'
 ORDER BY table_name, column_name;

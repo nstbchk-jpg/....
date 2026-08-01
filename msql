@@ -1,24 +1,10 @@
-EXEC('
-SET NOCOUNT ON;
-BEGIN TRY DEALLOCATE cur END TRY BEGIN CATCH END CATCH;
-DECLARE @s SYSNAME,@t SYSNAME,@c SYSNAME,@q NVARCHAR(MAX),@n INT;
-DECLARE cur CURSOR FAST_FORWARD FOR
- SELECT sc.name,t.name,c.name
- FROM sys.columns c
- JOIN sys.tables t ON c.object_id=t.object_id
- JOIN sys.schemas sc ON t.schema_id=sc.schema_id
- JOIN sys.types ty ON c.user_type_id=ty.user_type_id
- WHERE ty.name IN (''varchar'',''nvarchar'',''char'',''nchar'');
-OPEN cur; FETCH NEXT FROM cur INTO @s,@t,@c;
-WHILE @@FETCH_STATUS=0
-BEGIN
- SET @q=N''SELECT @n=COUNT(*) FROM ''+QUOTENAME(@s)+''.''+QUOTENAME(@t)+
-        N'' WHERE ''+QUOTENAME(@c)+N'' LIKE ''''%docx.js%'''''';
- BEGIN TRY
-  EXEC sp_executesql @q,N''@n INT OUTPUT'',@n=@n OUTPUT;
-  IF @n>0 RAISERROR(''HIT: %s.%s.%s = %d'',0,1,@s,@t,@c,@n) WITH NOWAIT;
- END TRY BEGIN CATCH END CATCH;
- FETCH NEXT FROM cur INTO @s,@t,@c;
-END
-CLOSE cur; DEALLOCATE cur;
-');
+SELECT STRING_AGG(
+  'SELECT '''+QUOTENAME(SCHEMA_NAME(t.schema_id))+'.'+QUOTENAME(t.name)+'.'+c.name+
+  ''' AS loc, COUNT(*) c FROM '+QUOTENAME(SCHEMA_NAME(t.schema_id))+'.'+QUOTENAME(t.name)+
+  ' WHERE '+QUOTENAME(c.name)+' LIKE ''%docx.js%''',
+  ' UNION ALL ')
+FROM sys.columns c
+JOIN sys.tables t ON c.object_id=t.object_id
+JOIN sys.types ty ON c.user_type_id=ty.user_type_id
+WHERE ty.name IN ('varchar','nvarchar','char','nchar')
+  AND c.max_length BETWEEN 8 AND 4000;

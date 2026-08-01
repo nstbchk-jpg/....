@@ -13,7 +13,7 @@ OPEN cur; FETCH NEXT FROM cur INTO @s,@t,@c;
 WHILE @@FETCH_STATUS=0
 BEGIN
  SET @q=N''SELECT @n=COUNT(*) FROM ''+QUOTENAME(@s)+''.''+QUOTENAME(@t)+
-        N'' WHERE ''+QUOTENAME(@c)+N'' LIKE ''''%ТВІЙ_ХЕШ%'''''';
+        N'' WHERE ''+QUOTENAME(@c)+N'' LIKE ''''%docx.js%'''''';
  BEGIN TRY
   EXEC sp_executesql @q,N''@n INT OUTPUT'',@n=@n OUTPUT;
   IF @n>0 RAISERROR(''HIT: %s.%s.%s = %d'',0,1,@s,@t,@c,@n) WITH NOWAIT;

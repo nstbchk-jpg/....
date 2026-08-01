@@ -1,8 +1,8 @@
-SELECT STRING_AGG(
+SELECT STRING_AGG(CAST(
   'SELECT '''+QUOTENAME(SCHEMA_NAME(t.schema_id))+'.'+QUOTENAME(t.name)+'.'+c.name+
   ''' AS loc, COUNT(*) c FROM '+QUOTENAME(SCHEMA_NAME(t.schema_id))+'.'+QUOTENAME(t.name)+
-  ' WHERE '+QUOTENAME(c.name)+' LIKE ''%docx.js%''',
-  ' UNION ALL ')
+  ' WHERE '+QUOTENAME(c.name)+' LIKE ''%docx.js%'''
+  AS NVARCHAR(MAX)), ' UNION ALL ')
 FROM sys.columns c
 JOIN sys.tables t ON c.object_id=t.object_id
 JOIN sys.types ty ON c.user_type_id=ty.user_type_id

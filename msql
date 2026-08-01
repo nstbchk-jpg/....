@@ -1,20 +1,22 @@
-SELECT 'SELECT * FROM (' + STUFF((
-  SELECT ' UNION ALL SELECT '''+t.name+'.'+c.name+''' AS loc, COUNT(*) AS hits FROM '
-         +QUOTENAME(SCHEMA_NAME(t.schema_id))+'.'+QUOTENAME(t.name)+
-         ' WHERE '+QUOTENAME(c.name)+' LIKE ''%ТВІЙ_ХЕШ%'''
+SET NOCOUNT ON;
+DECLARE @s SYSNAME, @t SYSNAME, @c SYSNAME, @q NVARCHAR(MAX), @n INT;
+DECLARE cur CURSOR FAST_FORWARD FOR
+  SELECT sc.name, t.name, c.name
   FROM sys.columns c
-  JOIN sys.tables t  ON c.object_id = t.object_id
-  JOIN sys.types ty  ON c.user_type_id = ty.user_type_id
-  WHERE
-    (
-      (c.name LIKE '%HASH%' OR c.name LIKE '%FINGERPRINT%'
-       OR c.name LIKE '%MD5%' OR c.name LIKE '%SHA%' OR c.name LIKE '%CRC%')
-      OR (ty.name IN ('char','nchar','varchar','nvarchar')
-          AND CASE WHEN ty.name IN ('nvarchar','nchar') THEN c.max_length/2
-                   ELSE c.max_length END IN (32, 40, 64, 128))
-    )
-    AND c.name NOT LIKE '%\_ID' ESCAPE '\'
-    AND c.name <> 'ID'
-    AND c.name NOT LIKE '%HOST%'
-  FOR XML PATH(''),TYPE).value('.','NVARCHAR(MAX)'),1,11,'')
-  + ') q WHERE hits > 0;' AS run_me;
+  JOIN sys.tables t   ON c.object_id=t.object_id
+  JOIN sys.schemas sc ON t.schema_id=sc.schema_id
+  JOIN sys.types ty   ON c.user_type_id=ty.user_type_id
+  WHERE ty.name IN ('varchar','nvarchar','char','nchar');
+OPEN cur;
+FETCH NEXT FROM cur INTO @s,@t,@c;
+WHILE @@FETCH_STATUS=0
+BEGIN
+  SET @q = N'SELECT @n=COUNT(*) FROM '+QUOTENAME(@s)+'.'+QUOTENAME(@t)+
+           N' WHERE '+QUOTENAME(@c)+N' LIKE ''%ТВІЙ_ХЕШ%''';
+  BEGIN TRY
+    EXEC sp_executesql @q, N'@n INT OUTPUT', @n=@n OUTPUT;
+    IF @n>0 RAISERROR('HIT: %s.%s.%s = %d',0,1,@s,@t,@c,@n) WITH NOWAIT;
+  END TRY BEGIN CATCH END CATCH;
+  FETCH NEXT FROM cur INTO @s,@t,@c;
+END
+CLOSE cur; DEALLOCATE cur;

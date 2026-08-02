@@ -1,10 +1,23 @@
-SELECT STRING_AGG(CAST(
-  'SELECT '''+QUOTENAME(SCHEMA_NAME(t.schema_id))+'.'+QUOTENAME(t.name)+'.'+c.name+
-  ''' AS loc, COUNT(*) c FROM '+QUOTENAME(SCHEMA_NAME(t.schema_id))+'.'+QUOTENAME(t.name)+
-  ' WHERE '+QUOTENAME(c.name)+' LIKE ''%docx.js%'''
-  AS NVARCHAR(MAX)), ' UNION ALL ')
-FROM sys.columns c
-JOIN sys.tables t ON c.object_id=t.object_id
-JOIN sys.types ty ON c.user_type_id=ty.user_type_id
-WHERE ty.name IN ('varchar','nvarchar','char','nchar')
-  AND c.max_length BETWEEN 8 AND 4000;
+EXEC('
+SET NOCOUNT ON;
+BEGIN TRY DROP TABLE ##chg END TRY BEGIN CATCH END CATCH;
+CREATE TABLE ##chg(tbl SYSNAME, col SYSNAME, maxval DATETIME);
+DECLARE @s SYSNAME,@t SYSNAME,@c SYSNAME,@q NVARCHAR(MAX);
+DECLARE cur CURSOR FAST_FORWARD FOR
+ SELECT sc.name,t.name,c.name
+ FROM sys.columns c
+ JOIN sys.tables t ON c.object_id=t.object_id
+ JOIN sys.schemas sc ON t.schema_id=sc.schema_id
+ JOIN sys.types ty ON c.user_type_id=ty.user_type_id
+ WHERE ty.name IN (''datetime'',''datetime2'',''smalldatetime'')
+   AND (c.name LIKE ''%TIME%'' OR c.name LIKE ''%MODIF%'' OR c.name LIKE ''%UPDATE%'' OR c.name LIKE ''%DATE%'');
+OPEN cur; FETCH NEXT FROM cur INTO @s,@t,@c;
+WHILE @@FETCH_STATUS=0
+BEGIN
+ SET @q=N''INSERT ##chg SELECT ''''''+@t+'''''',''''''+@c+'''''',MAX(TRY_CONVERT(datetime,''+QUOTENAME(@c)+'')) FROM ''+QUOTENAME(@s)+''.''+QUOTENAME(@t);
+ BEGIN TRY EXEC(@q) END TRY BEGIN CATCH END CATCH;
+ FETCH NEXT FROM cur INTO @s,@t,@c;
+END
+CLOSE cur; DEALLOCATE cur;
+SELECT * FROM ##chg WHERE maxval IS NOT NULL ORDER BY maxval DESC;
+');
